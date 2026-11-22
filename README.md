@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/M365.EndpointInspector.Wpf/Assets/AppIcon.svg" alt="M365 Endpoint Inspector logo" width="128" />
+  <img src="assets/readme-logo.svg" alt="M365 Endpoint Inspector logo" width="128" />
 </p>
 
 # M365 Endpoint Inspector
