@@ -1,0 +1,100 @@
+{
+  "provenance": "Synthetic",
+  "version": "synthetic-2",
+  "importedAt": "2026-01-02T12:00:00Z",
+  "endpoints": [
+    {
+      "id": 101,
+      "serviceArea": "Exchange",
+      "serviceAreaDisplayName": "Synthetic Mail",
+      "category": "Optimize",
+      "required": true,
+      "expressRoute": true,
+      "urls": [
+        "*.mail.example.test",
+        "shared.example.test"
+      ],
+      "ips": [
+        "192.0.2.32/27",
+        "2001:db8:1::20/123"
+      ],
+      "tcpPorts": "443, 5000-5004",
+      "udpPorts": "3478-3481",
+      "notes": "Synthetic range",
+      "extra": {
+        "routing": [
+          {
+            "tag": "blue",
+            "weight": 2
+          }
+        ],
+        "a/b": {
+          "~name": "scoped"
+        }
+      }
+    },
+    {
+      "id": 102,
+      "serviceArea": "SharePoint",
+      "serviceAreaDisplayName": "Synthetic Sites",
+      "category": "Allow",
+      "required": false,
+      "expressRoute": false,
+      "urls": [
+        "shared.example.test"
+      ],
+      "ips": [
+        "192.0.2.40",
+        "2001:db8:1::28"
+      ],
+      "tcpPorts": "443",
+      "udpPorts": "5002",
+      "notes": "blue",
+      "score": 1
+    },
+    {
+      "id": 103,
+      "serviceArea": "Common",
+      "category": "Default",
+      "required": true,
+      "urls": [
+        "shared.example.test",
+        "common.example.test"
+      ],
+      "tcpPorts": "80",
+      "notes": null
+    },
+    {
+      "id": 104,
+      "serviceArea": "Common",
+      "category": "Allow",
+      "required": null,
+      "expressRoute": null,
+      "urls": [
+        "foundation.example.test"
+      ],
+      "ips": [
+        "198.51.100.9",
+        "2001:db8:2::1"
+      ],
+      "tcpPorts": null,
+      "other": {
+        "routing": [
+          {
+            "tag": "blue"
+          }
+        ]
+      }
+    },
+    {
+      "id": 106,
+      "serviceArea": "Skype",
+      "category": "Default",
+      "required": false,
+      "urls": [
+        "new.example.test"
+      ],
+      "udpPorts": "1,65535"
+    }
+  ]
+}

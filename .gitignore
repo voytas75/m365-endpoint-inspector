@@ -1,0 +1,40 @@
+# .NET builds and test output
+[Bb]in/
+[Oo]bj/
+artifacts/
+TestResults/
+*.trx
+
+# IDE and per-user settings
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.sln.docstates
+*.DotSettings.user
+
+# Local application data and operator output
+/app-data/
+/.local/
+/.cache/
+/cache/
+/sessions/
+/exports/
+/logs/
+*.log
+
+# Local credentials and private key material
+.env
+.env.*
+!.env.example
+.aws/
+.azure/
+.secrets/
+secrets/
+credentials/
+credentials.json
+*.pfx
+*.p12
+*.key
+*.pem

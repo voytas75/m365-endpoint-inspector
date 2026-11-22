@@ -1,0 +1,11 @@
+[
+  { "id": 1, "serviceArea": "Common", "category": "Allow", "urls": ["edge.example.test"] },
+  { "id": 2, "serviceArea": "Exchange", "category": "Default", "ips": ["192.0.2.0/24"] },
+  {
+    "id": 3,
+    "serviceArea": "Exchange",
+    "category": "Allow",
+    "notes": "Simulated Worldwide fixture. Only the wildcard string and its array position come from the user report.",
+    "urls": ["mail.example.test", "autodiscover.*.onmicrosoft.com"]
+  }
+]

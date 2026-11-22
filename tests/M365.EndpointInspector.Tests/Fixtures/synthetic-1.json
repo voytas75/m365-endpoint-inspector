@@ -1,0 +1,101 @@
+{
+  "provenance": "Synthetic",
+  "version": "synthetic-1",
+  "importedAt": "2026-01-01T12:00:00Z",
+  "endpoints": [
+    {
+      "id": 101,
+      "serviceArea": "Exchange",
+      "serviceAreaDisplayName": "Synthetic Mail",
+      "category": "Optimize",
+      "required": true,
+      "expressRoute": true,
+      "urls": [
+        "*.mail.example.test",
+        "shared.example.test"
+      ],
+      "ips": [
+        "192.0.2.32/27",
+        "2001:db8:1::20/123"
+      ],
+      "tcpPorts": "443, 5000-5004",
+      "udpPorts": "3478-3481",
+      "notes": "Synthetic range",
+      "extra": {
+        "routing": [
+          {
+            "tag": "blue",
+            "weight": 1
+          }
+        ],
+        "a/b": {
+          "~name": "scoped"
+        }
+      }
+    },
+    {
+      "score": 1.0,
+      "notes": "blue",
+      "udpPorts": "5002",
+      "tcpPorts": "443",
+      "ips": [
+        "192.0.2.40",
+        "2001:db8:1::28"
+      ],
+      "urls": [
+        "shared.example.test"
+      ],
+      "expressRoute": false,
+      "required": false,
+      "category": "Allow",
+      "serviceAreaDisplayName": "Synthetic Sites",
+      "serviceArea": "SharePoint",
+      "id": 102
+    },
+    {
+      "id": 103,
+      "serviceArea": "Common",
+      "category": "Default",
+      "required": true,
+      "urls": [
+        "shared.example.test",
+        "common.example.test"
+      ],
+      "tcpPorts": "80",
+      "notes": null
+    },
+    {
+      "id": 104,
+      "serviceArea": "Common",
+      "category": "Allow",
+      "required": null,
+      "urls": [
+        "foundation.example.test"
+      ],
+      "ips": [
+        "198.51.100.9",
+        "2001:db8:2::1"
+      ],
+      "tcpPorts": null,
+      "other": {
+        "routing": [
+          {
+            "tag": "blue"
+          }
+        ]
+      }
+    },
+    {
+      "id": 105,
+      "serviceArea": "Skype",
+      "category": "Default",
+      "urls": [
+        "retired.example.test"
+      ],
+      "ips": [
+        "203.0.113.128/25"
+      ],
+      "tcpPorts": "8443"
+    }
+  ]
+}

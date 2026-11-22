@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../M365.EndpointInspector.Presentation/M365.EndpointInspector.Presentation.csproj" />
+    <Content Include="../../tests/M365.EndpointInspector.Tests/Fixtures/synthetic-2.json"
+             Link="Demo/synthetic-2.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

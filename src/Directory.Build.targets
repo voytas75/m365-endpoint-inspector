@@ -1,0 +1,51 @@
+<Project>
+  <!-- Hash product inputs only. Sort relative paths ordinally so a clean copy has the same ID. -->
+  <UsingTask TaskName="FingerprintProduct" TaskFactory="RoslynCodeTaskFactory"
+             AssemblyFile="$(MSBuildToolsPath)/Microsoft.Build.Tasks.Core.dll">
+    <ParameterGroup>
+      <Root Required="true" />
+      <Inputs ParameterType="Microsoft.Build.Framework.ITaskItem[]" Required="true" />
+      <BuildSettings Required="true" />
+      <Fingerprint Output="true" />
+    </ParameterGroup>
+    <Task>
+      <Using Namespace="System.Security.Cryptography" />
+      <Using Namespace="System.Text" />
+      <Code Type="Fragment" Language="cs"><![CDATA[
+        using (var hash = SHA256.Create())
+        {
+            var manifest = new StringBuilder(BuildSettings).Append('\n');
+            var names = Inputs.Select(item => item.GetMetadata("FullPath").Substring(Root.Length)
+                                  .Replace('\\', '/')).OrderBy(path => path, StringComparer.Ordinal);
+            foreach (var name in names)
+            {
+                using (var input = File.OpenRead(Path.Combine(Root, name)))
+                    manifest.Append(name).Append('\0').Append(BitConverter.ToString(hash.ComputeHash(input))).Append('\n');
+            }
+            Fingerprint = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(manifest.ToString())))
+                .Replace("-", "").ToLowerInvariant();
+        }
+      ]]></Code>
+    </Task>
+  </UsingTask>
+
+  <Target Name="StampProductBuild" BeforeTargets="GetAssemblyAttributes"
+          Condition="'$(MSBuildProjectName)' == 'M365.EndpointInspector.Presentation' Or '$(MSBuildProjectName)' == 'M365.EndpointInspector.Wpf'">
+    <PropertyGroup>
+      <ProductRoot>$([MSBuild]::NormalizeDirectory('$(MSBuildThisFileDirectory)..'))</ProductRoot>
+    </PropertyGroup>
+    <ItemGroup>
+      <ProductInput Include="$(ProductRoot)global.json;$(ProductRoot)src/Directory.Build.props;$(ProductRoot)src/Directory.Build.targets;
+                             $(ProductRoot)src/M365.EndpointInspector.*/M365.EndpointInspector.*.csproj;
+                             $(ProductRoot)src/**/*.cs;$(ProductRoot)src/**/*.xaml;
+                             $(ProductRoot)tests/M365.EndpointInspector.Tests/Fixtures/synthetic-2.json"
+                    Exclude="$(ProductRoot)src/**/obj/**;$(ProductRoot)src/**/bin/**;$(ProductRoot)src/**/*_wpftmp.csproj" />
+    </ItemGroup>
+    <FingerprintProduct Root="$(ProductRoot)" Inputs="@(ProductInput)" BuildSettings="$(Configuration)|$(NETCoreSdkVersion)">
+      <Output TaskParameter="Fingerprint" PropertyName="ProductFingerprint" />
+    </FingerprintProduct>
+    <PropertyGroup>
+      <InformationalVersion>$(Version)+$(ProductFingerprint)</InformationalVersion>
+    </PropertyGroup>
+  </Target>
+</Project>

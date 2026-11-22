@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="src/M365.EndpointInspector.Domain/M365.EndpointInspector.Domain.csproj" />
+  <Project Path="src/M365.EndpointInspector.Feed/M365.EndpointInspector.Feed.csproj" />
+  <Project Path="src/M365.EndpointInspector.Presentation/M365.EndpointInspector.Presentation.csproj" />
+  <Project Path="tests/M365.EndpointInspector.Feed.Tests/M365.EndpointInspector.Feed.Tests.csproj" />
+  <Project Path="tests/M365.EndpointInspector.Presentation.Tests/M365.EndpointInspector.Presentation.Tests.csproj" />
+  <Project Path="tests/M365.EndpointInspector.Tests/M365.EndpointInspector.Tests.csproj" />
+</Solution>
