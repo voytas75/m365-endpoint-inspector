@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="src/M365.EndpointInspector.Wpf/Assets/AppIcon.svg" alt="M365 Endpoint Inspector logo" width="128" />
+</p>
+
 # M365 Endpoint Inspector
 
 A local browser of Microsoft 365 network requirements for Windows, written in C# using .NET 10 and WPF. The project is in development.
