@@ -6,7 +6,14 @@ A local browser of Microsoft 365 network requirements for Windows, written in C#
 - Filters and organizes requirements, shows entry details, and exports the view to CSV.
 - Locally preserves the source, filters, selection, table layout, and expanded filter sections. Two sample synthetic snapshots let you test entry comparison without downloading data.
 
-The application displays Microsoft requirements; it does not yet measure endpoint availability.
+## Look up a domain or IP address
+
+1. Open a local JSON or CSV file, or download the Microsoft 365 Worldwide list.
+2. Enter a domain, IP address, or CIDR range and select **Apply**.
+3. Inspect the matching entries for their service area, category, and TCP/UDP ports.
+4. Export the filtered view to CSV to share the result.
+
+You can review a saved list without downloading a new one. A match tells you what the source lists, not whether the endpoint is reachable from your network.
 
 ## Building and running
 
