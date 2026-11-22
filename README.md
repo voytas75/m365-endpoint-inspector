@@ -19,4 +19,4 @@ dotnet run --project src/M365.EndpointInspector.Wpf
 
 Źródłem wymagań dla planowanej edycji Worldwide jest Microsoft. Dokumentacja usługi opisuje dostęp do danych i wersjonowanie, a wykaz adresów objaśnia zakresy, kategorie i obszary usług. [Usługa internetowa Microsoft 365 IP Address and URL](https://learn.microsoft.com/en-us/microsoft-365/enterprise/microsoft-365-ip-web-service?view=o365-worldwide) · [Adresy URL i zakresy adresów IP Microsoft 365](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges?view=o365-worldwide)
 
-Projekt nie ma jeszcze nadanej licencji.
+Projekt jest udostępniany na [licencji MIT](LICENSE).
