@@ -1,6 +1,6 @@
 # M365 Endpoint Inspector
 
-A local browser of Microsoft 365 network requirements for Windows, written in C# using .NET 10 and WPF. Development version **v0.3.4-dev**.
+A local browser of Microsoft 365 network requirements for Windows, written in C# using .NET 10 and WPF. The project is in development.
 
 - Downloads the Worldwide list on request or opens a local JSON or CSV file.
 - Filters and organizes requirements, shows entry details, and exports the view to CSV.
