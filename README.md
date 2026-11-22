@@ -27,4 +27,10 @@ Microsoft is the source of the Worldwide requirements. The service documentation
 
 For project structure, test commands, and compatibility rules, see the [developer guide](README-DEV.md).
 
+## AI-assisted development
+
+Parts of the application code and tests were developed with an AI assistant running in [OpenClaw](https://github.com/openclaw/openclaw), the agent harness. The maintainer directed the work and tested selected builds on Windows.
+
+The model used to prepare this disclosure was `microsoft-foundry/gpt-6.2-sol-openclaw`. The available development records do not reliably identify the model for every earlier coding session, so that identifier should not be read as attribution for the entire codebase. The AI tooling was used during development; it is not required to run the application.
+
 The project is available under the [MIT license](LICENSE).
