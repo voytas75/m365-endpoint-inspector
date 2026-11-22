@@ -83,17 +83,17 @@
         <Border DockPanel.Dock="Top" Background="{StaticResource Ink}" Padding="18,12">
             <DockPanel LastChildFill="False">
                 <StackPanel DockPanel.Dock="Left" VerticalAlignment="Center">
-                    <TextBlock Text="Przeglądarka wymagań" Foreground="White" FontSize="23" FontWeight="SemiBold"/>
+                    <TextBlock Text="Requirements browser" Foreground="White" FontSize="23" FontWeight="SemiBold"/>
                     <TextBlock Text="{Binding Label}" Foreground="White" FontSize="15" FontWeight="SemiBold"/>
                 </StackPanel>
                 <StackPanel x:Name="SourceActions" DockPanel.Dock="Right" Orientation="Horizontal">
-                    <Button Content="_Pobierz z Internetu" Click="Download_Click"/>
-                    <Button Content="_Otwórz plik" Click="OpenFile_Click" Margin="8,0,0,0"/>
-                    <Button Content="_Eksportuj CSV…" Click="ExportCsv_Click" Margin="8,0,0,0"/>
+                    <Button Content="_Download from Internet" Click="Download_Click"/>
+                    <Button Content="_Open file" Click="OpenFile_Click" Margin="8,0,0,0"/>
+                    <Button Content="_Export CSV…" Click="ExportCsv_Click" Margin="8,0,0,0"/>
                     <Menu VerticalAlignment="Center" Margin="12,0,0,0">
-                        <MenuItem Header="_Więcej">
-                            <MenuItem Header="Przykład syntetyczny (Synthetic)" Click="OpenDemo_Click"/>
-                            <MenuItem Header="Otwórz lokalny cache…" Click="OpenCache_Click"/>
+                        <MenuItem Header="_More">
+                            <MenuItem Header="Synthetic example (Synthetic)" Click="OpenDemo_Click"/>
+                            <MenuItem Header="Open local cache…" Click="OpenCache_Click"/>
                         </MenuItem>
                     </Menu>
                 </StackPanel>
@@ -110,7 +110,7 @@
                     <TextBlock Text="{Binding Notice, TargetNullValue=''}" Style="{StaticResource OptionalText}"
                                ToolTip="{Binding Notice}"/>
                 </ScrollViewer>
-                <Expander Header="Szczegóły odczytu" Visibility="{Binding HasDetails, Converter={StaticResource VisibleIfTrue}}">
+                <Expander Header="Read details" Visibility="{Binding HasDetails, Converter={StaticResource VisibleIfTrue}}">
                     <ScrollViewer MaxHeight="78" VerticalScrollBarVisibility="Auto">
                         <TextBlock Text="{Binding Details}" TextWrapping="Wrap"/>
                     </ScrollViewer>
@@ -122,12 +122,12 @@
         <Border DockPanel.Dock="Bottom" x:Name="ActivityPanel" Visibility="Collapsed"
                 Padding="12,5" BorderThickness="0,1,0,0" BorderBrush="{StaticResource Rule}">
             <DockPanel>
-                <Button DockPanel.Dock="Right" x:Name="CancelAction" Content="_Anuluj operację" Click="Cancel_Click"/>
+                <Button DockPanel.Dock="Right" x:Name="CancelAction" Content="_Cancel operation" Click="Cancel_Click"/>
                 <StackPanel>
                     <ScrollViewer MaxHeight="58" VerticalScrollBarVisibility="Auto" Focusable="False">
                         <TextBlock x:Name="Activity" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
                     </ScrollViewer>
-                    <Expander x:Name="ActivityDetails" Header="Szczegóły odczytu" Visibility="Collapsed">
+                    <Expander x:Name="ActivityDetails" Header="Read details" Visibility="Collapsed">
                         <ScrollViewer MaxHeight="78" VerticalScrollBarVisibility="Auto">
                             <TextBlock x:Name="ActivityDetailText" TextWrapping="Wrap"/>
                         </ScrollViewer>
@@ -142,59 +142,59 @@
             </Grid.ColumnDefinitions>
             <Border BorderThickness="0,0,1,0" BorderBrush="{StaticResource Rule}">
                 <DockPanel x:Name="FilterPanel" Margin="14,10">
-                    <TextBlock DockPanel.Dock="Top" Text="Filtry" Style="{StaticResource SectionHeading}"/>
+                    <TextBlock DockPanel.Dock="Top" Text="Filters" Style="{StaticResource SectionHeading}"/>
                     <UniformGrid DockPanel.Dock="Bottom" Rows="1" Margin="0,8,0,0">
-                        <Button Content="_Zastosuj" Click="Apply_Click" FontWeight="SemiBold"/>
-                        <Button Content="_Wyczyść" Click="Reset_Click" Margin="6,0,0,0"/>
+                        <Button Content="_Apply" Click="Apply_Click" FontWeight="SemiBold"/>
+                        <Button Content="_Reset" Click="Reset_Click" Margin="6,0,0,0"/>
                     </UniformGrid>
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                         <StackPanel Margin="0,0,6,4">
-                            <Label Content="O_bszar usługi" Target="{Binding ElementName=Area}"/>
+                            <Label Content="Service _area" Target="{Binding ElementName=Area}"/>
                             <ComboBox x:Name="Area"/>
-                            <Label Content="_Kategoria" Target="{Binding ElementName=CategoryBox}"/>
+                            <Label Content="_Category" Target="{Binding ElementName=CategoryBox}"/>
                             <ComboBox x:Name="CategoryBox"/>
-                            <Label Content="Wymagany" Target="{Binding ElementName=RequiredBox}"/>
+                            <Label Content="Required" Target="{Binding ElementName=RequiredBox}"/>
                             <ComboBox x:Name="RequiredBox"/>
-                            <Label Content="Protokół" Target="{Binding ElementName=Protocol}"/>
+                            <Label Content="Protocol" Target="{Binding ElementName=Protocol}"/>
                             <Border x:Name="ProtocolValidationBorder" Style="{StaticResource InvalidFilterComboBoxBorder}"
                                     Tag="{Binding Tag, ElementName=Protocol}">
                                 <ComboBox x:Name="Protocol" Style="{StaticResource InvalidFilterComboBox}"/>
                             </Border>
                             <TextBlock x:Name="ProtocolError" Text="" Style="{StaticResource FieldErrorText}"/>
-                            <Label Content="_Port lub zakres" Target="{Binding ElementName=Ports}"/>
-                            <TextBox MaxLength="16384" x:Name="Ports" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Port, zakres lub lista, np. 443, 5000-5004. Wybierz TCP lub UDP."/>
+                            <Label Content="_Port or range" Target="{Binding ElementName=Ports}"/>
+                            <TextBox MaxLength="16384" x:Name="Ports" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Port, range or list, e.g. 443, 5000-5004. Select TCP or UDP."/>
                             <TextBlock x:Name="PortsError" Text="" Style="{StaticResource FieldErrorText}"/>
-                            <Label Content="_Domena lub wzorzec z wpisu" Target="{Binding ElementName=DomainBox}"/>
-                            <TextBox MaxLength="16384" x:Name="DomainBox" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Konkretna nazwa DNS lub dokładny wzorzec z otwartej migawki."/>
+                            <Label Content="_Domain or entry pattern" Target="{Binding ElementName=DomainBox}"/>
+                            <TextBox MaxLength="16384" x:Name="DomainBox" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Concrete DNS name or exact pattern from the open snapshot."/>
                             <TextBlock x:Name="DomainBoxError" Text="" Style="{StaticResource FieldErrorText}"/>
-                            <Label Content="Adres _IP lub CIDR" Target="{Binding ElementName=Address}"/>
-                            <TextBox MaxLength="16384" x:Name="Address" Style="{StaticResource InvalidFilterTextBox}" ToolTip="IPv4, IPv6 lub prefiks sieci, np. 192.0.2.32/27"/>
+                            <Label Content="_IP address or CIDR" Target="{Binding ElementName=Address}"/>
+                            <TextBox MaxLength="16384" x:Name="Address" Style="{StaticResource InvalidFilterTextBox}" ToolTip="IPv4, IPv6 or network prefix, e.g. 192.0.2.32/27"/>
                             <TextBlock x:Name="AddressError" Text="" Style="{StaticResource FieldErrorText}"/>
-                            <Expander x:Name="SourceFields" Header="Pola źródłowe" Margin="0,12,0,0">
+                            <Expander x:Name="SourceFields" Header="Source fields" Margin="0,12,0,0">
                                 <StackPanel Margin="6,3,0,0">
-                                    <Label Content="Nazwa usługi (dokładna)" Target="{Binding ElementName=DisplayNameBox}"/>
+                                    <Label Content="Service name (exact)" Target="{Binding ElementName=DisplayNameBox}"/>
                                     <TextBox MaxLength="16384" x:Name="DisplayNameBox"/>
-                                    <Label Content="Uwagi (dokładne)" Target="{Binding ElementName=Notes}"/>
+                                    <Label Content="Notes (exact)" Target="{Binding ElementName=Notes}"/>
                                     <TextBox MaxLength="16384" x:Name="Notes"/>
-                                    <Label Content="Ścieżka JSON Pointer" Target="{Binding ElementName=Pointer}"/>
-                                    <TextBox MaxLength="16384" x:Name="Pointer" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Np. /extra/routing/0/tag"/>
+                                    <Label Content="JSON Pointer path" Target="{Binding ElementName=Pointer}"/>
+                                    <TextBox MaxLength="16384" x:Name="Pointer" Style="{StaticResource InvalidFilterTextBox}" ToolTip="E.g. /extra/routing/0/tag"/>
                                     <TextBlock x:Name="PointerError" Text="" Style="{StaticResource FieldErrorText}"/>
-                                    <Label Content="Wartość JSON" Target="{Binding ElementName=JsonValue}"/>
-                                    <TextBox MaxLength="16384" x:Name="JsonValue" Style="{StaticResource InvalidFilterTextBox}" ToolTip="Np. &quot;blue&quot;, true lub null. Puste pole przy podanej ścieżce oznacza brak właściwości."/>
+                                    <Label Content="JSON value" Target="{Binding ElementName=JsonValue}"/>
+                                    <TextBox MaxLength="16384" x:Name="JsonValue" Style="{StaticResource InvalidFilterTextBox}" ToolTip="E.g. &quot;blue&quot;, true or null. An empty field with a specified path means the property is missing."/>
                                     <TextBlock x:Name="JsonValueError" Text="" Style="{StaticResource FieldErrorText}"/>
                                 </StackPanel>
                             </Expander>
-                            <Expander x:Name="Comparison" Header="Porównanie wpisów" Margin="0,10,0,0">
+                            <Expander x:Name="Comparison" Header="Entry comparison" Margin="0,10,0,0">
                                 <StackPanel Margin="6,4,0,0">
-                                    <Button Content="Odniesienie Synthetic…" Click="OpenReference_Click"/>
+                                    <Button Content="Synthetic reference…" Click="OpenReference_Click"/>
                                     <TextBlock x:Name="ReferenceInfo" TextWrapping="Wrap" Margin="0,5,0,0"/>
-                                    <Label Content="Zmiana wpisu" Target="{Binding ElementName=Change}"/>
+                                    <Label Content="Entry change" Target="{Binding ElementName=Change}"/>
                                     <Border x:Name="ChangeValidationBorder" Style="{StaticResource InvalidFilterComboBoxBorder}"
                                             Tag="{Binding Tag, ElementName=Change}">
                                         <ComboBox x:Name="Change" Style="{StaticResource InvalidFilterComboBox}"/>
                                     </Border>
                                     <TextBlock x:Name="ChangeError" Text="" Style="{StaticResource FieldErrorText}"/>
-                                    <Button x:Name="DetachReference" Content="Odłącz odniesienie"
+                                    <Button x:Name="DetachReference" Content="Detach reference"
                                             Click="Detach_Click" Margin="0,6,0,0"/>
                                 </StackPanel>
                             </Expander>
@@ -214,7 +214,7 @@
                                AutomationProperties.LiveSetting="Polite"/>
                     <Border x:Name="FilterProblemBanner" Style="{StaticResource FilterWarningBanner}">
                         <StackPanel>
-                            <TextBlock x:Name="FilterProblemHeading" Text="⚠ Błąd filtra" FontWeight="Bold" FontSize="16" TextWrapping="Wrap"/>
+                            <TextBlock x:Name="FilterProblemHeading" Text="⚠ Filter error" FontWeight="Bold" FontSize="16" TextWrapping="Wrap"/>
                             <TextBlock x:Name="FilterProblem" Text="" FontWeight="Bold" FontSize="15" Margin="0,4,0,0"
                                        TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}"/>
                         </StackPanel>
@@ -224,30 +224,30 @@
                 <DockPanel Grid.Row="1">
                     <StackPanel DockPanel.Dock="Bottom" Visibility="{Binding ShowCommon, Converter={StaticResource VisibleIfTrue}}">
                         <TextBlock Text="{Binding CommonHeading}" Margin="0,10,0,0" Style="{StaticResource SectionHeading}"/>
-                        <TextBlock Text="Wszystkie bieżące wpisy Common dla wybranej usługi." Margin="0,1,0,4"/>
+                        <TextBlock Text="All current Common entries for the selected service." Margin="0,1,0,4"/>
                         <local:EndpointGrid x:Name="CommonGrid" MaxHeight="124"
-                                            AutomationProperties.Name="Zależności Common" SelectionChanged="SelectRow"/>
+                                            AutomationProperties.Name="Common dependencies" SelectionChanged="SelectRow"/>
                     </StackPanel>
                     <local:EndpointGrid x:Name="HitsGrid"
-                                        AutomationProperties.Name="Trafienia filtra" SelectionChanged="SelectRow"/>
+                                        AutomationProperties.Name="Filter hits" SelectionChanged="SelectRow"/>
                 </DockPanel>
                 <GridSplitter Grid.Row="2" Height="5" HorizontalAlignment="Stretch" VerticalAlignment="Center"
                               Background="{StaticResource Rule}" ResizeDirection="Rows" ResizeBehavior="PreviousAndNext"
-                              AutomationProperties.Name="Wysokość panelu szczegółów"/>
+                              AutomationProperties.Name="Details panel height"/>
                 <DockPanel Grid.Row="3" x:Name="DetailPanel" Margin="0,4,0,0">
                     <TextBlock DockPanel.Dock="Top" Style="{StaticResource SectionHeading}"
-                               Text="{Binding Title, TargetNullValue='Szczegóły wpisu', FallbackValue='Szczegóły wpisu'}"/>
+                               Text="{Binding Title, TargetNullValue='Entry details', FallbackValue='Entry details'}"/>
                     <DockPanel DockPanel.Dock="Top" x:Name="TargetBar" LastChildFill="False" Margin="0,3,0,4">
-                        <Label Content="Cel wpisu" Target="{Binding ElementName=Targets}" VerticalAlignment="Center" Margin="0,0,7,0"/>
+                        <Label Content="Entry target" Target="{Binding ElementName=Targets}" VerticalAlignment="Center" Margin="0,0,7,0"/>
                         <ComboBox x:Name="Targets" Width="214"
                                   DisplayMemberPath="Value" SelectionChanged="SelectTarget"/>
-                        <Button x:Name="Memberships" Content="Pokaż wszystkie ID celu" Click="Memberships_Click"
-                                ToolTip="Wyszukaj tę domenę lub zakres IP we wszystkich obszarach." Margin="6,0,0,0"/>
+                        <Button x:Name="Memberships" Content="Show all target IDs" Click="Memberships_Click"
+                                ToolTip="Search for this domain or IP range across all service areas." Margin="6,0,0,0"/>
                     </DockPanel>
-                    <TextBox Text="{Binding RawJson, Mode=OneWay, FallbackValue='Wybierz wiersz, aby odczytać szczegóły JSON.'}"
+                    <TextBox Text="{Binding RawJson, Mode=OneWay, FallbackValue='Select a row to read JSON details.'}"
                              IsReadOnly="True" FontFamily="Consolas" FontSize="12" IsUndoEnabled="False"
                              HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
-                             AutomationProperties.Name="{Binding RepresentationLabel, FallbackValue='Szczegóły JSON wybranego wpisu'}"/>
+                             AutomationProperties.Name="{Binding RepresentationLabel, FallbackValue='Selected entry JSON details'}"/>
                 </DockPanel>
             </Grid>
         </Grid>

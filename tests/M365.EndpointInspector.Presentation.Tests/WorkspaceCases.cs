@@ -50,13 +50,13 @@ internal static class WorkspaceCases
         var first = await Click();
         Check.Equal(RefreshStatus.Updated, first.Origin!.Status);
         Check.True(first.SourceLabel.Contains("Internet") && first.SourceLabel.Contains("SimulatedWorldwide"));
-        Check.True(first.Metadata.Contains("Wersję sprawdzono przed pobraniem"));
+        Check.True(first.Metadata.Contains("The version was checked before content retrieval"));
         Check.Equal(f.Clock.GetUtcNow().AddHours(1), first.Origin.NextCheck);
         f.Clock.Advance(TimeSpan.FromMinutes(59));
         var held = await Click();
         Check.Equal(RefreshStatus.Deferred, held.Origin!.Status);
         Check.Equal(2, f.Transport.Ids.Count);
-        Check.True(held.Notice!.Contains("Kontrola odroczona") && held.Notice.Contains("01:00:00 UTC"));
+        Check.True(held.Notice!.Contains("Check deferred") && held.Notice.Contains("01:00:00 UTC"));
         f.Clock.Advance(TimeSpan.FromMinutes(1));
         f.Transport.Reply("version", SimulatedTransport.Version(SimulatedTransport.First));
         var unchanged = await Click();
@@ -74,7 +74,7 @@ internal static class WorkspaceCases
         Check.Equal(RefreshStatus.Throttled, fallback.Origin!.Status);
         Check.Equal(CacheGeneration.Previous, fallback.Origin.Generation);
         Check.True(fallback.Notice!.Contains("429") && !fallback.Notice.Contains("active:") && fallback.Details!.Contains("active:"));
-        Check.True(fallback.Metadata.Contains("3 godz.") && fallback.SourceLabel.Contains("kopia zapasowa"));
+        Check.True(fallback.Metadata.Contains("3 h") && fallback.SourceLabel.Contains("previous copy"));
         Check.Equal(f.Clock.GetUtcNow().AddHours(3), fallback.Origin.NextCheck);
         var store = Store(root, f.Clock);
         store.Load();
@@ -85,7 +85,7 @@ internal static class WorkspaceCases
         f.Clock.Advance(TimeSpan.FromDays(2));
         var restored = Store(root, f.Clock).Load().Workspace.Document;
         Check.Equal(fallback.Origin, restored.Origin);
-        Check.True(restored.Metadata.Contains("2 d 3 godz.") && restored.Notice == fallback.Notice);
+        Check.True(restored.Metadata.Contains("2 d 3 h") && restored.Notice == fallback.Notice);
         Check.Equal(6, f.Transport.Ids.Count);
         Check.Equal(1, f.Transport.Ids.Distinct().Count());
         f.Transport.Drained();
@@ -102,14 +102,14 @@ internal static class WorkspaceCases
         try { await Click(); throw new Exception("Expected validation failure"); }
         catch (InvalidDataException ex)
         {
-            Check.True(ex.Message.Contains("walidacji") && !ex.Message.Contains("active:"));
+            Check.True(ex.Message.Contains("validation") && !ex.Message.Contains("active:"));
             Check.True(ex.InnerException!.Message.Contains("active:"));
         }
         try { await BrowserDocument.DownloadAsync(f.Feed, f.Clock, Token); throw new Exception("Expected Release deferral"); }
         catch (InvalidDataException ex)
         {
-            Check.True(ex.Message.Contains("Nie wysłano żądania.") && ex.Message.Contains("— błąd walidacji danych"));
-            Check.True(ex.InnerException!.Message.Contains("Poprzednia próba") && !ex.Message.Contains("active:"));
+            Check.True(ex.Message.Contains("No request sent.") && ex.Message.Contains("— data validation error"));
+            Check.True(ex.InnerException!.Message.Contains("Previous attempt") && !ex.Message.Contains("active:"));
         }
         var throttle = SimulatedTransport.Json("", HttpStatusCode.TooManyRequests);
         throttle.Headers.RetryAfter = new(TimeSpan.FromMinutes(5));
@@ -119,8 +119,8 @@ internal static class WorkspaceCases
         try { await Click(); throw new Exception("Expected deferral without cache"); }
         catch (InvalidDataException ex)
         {
-            Check.True(ex.Message.Contains("Nie wysłano żądania.") && ex.Message.Contains("00:05:00 UTC"));
-            Check.True(ex.Message.Contains("Poprzednia próba: 2001-01-01 00:00:00 UTC — ograniczenie żądań (HTTP 429)"));
+            Check.True(ex.Message.Contains("No request sent.") && ex.Message.Contains("00:05:00 UTC"));
+            Check.True(ex.Message.Contains("Previous attempt: 2001-01-01 00:00:00 UTC — request throttling (HTTP 429)"));
             Check.True(!ex.Message.Contains("active:") && ex.InnerException!.Message.Contains("HTTP 429."));
         }
         Check.Equal(3, f.Transport.Ids.Count);
@@ -135,9 +135,9 @@ internal static class WorkspaceCases
         version.Headers.RetryAfter = new(TimeSpan.FromMinutes(2));
         f.Transport.Reply("version", version);
         var partial = await Click();
-        Check.True(partial.Notice!.Contains("Sprawdzono wersję.") && !partial.Notice.Contains("Nie wysłano"));
+        Check.True(partial.Notice!.Contains("Version checked.") && !partial.Notice.Contains("No request sent"));
         var held = await Click();
-        Check.True(held.Notice!.Contains("Nie wysłano żądania.") && held.Details!.Contains("Poprzednia próba"));
+        Check.True(held.Notice!.Contains("No request sent.") && held.Details!.Contains("Previous attempt"));
         Check.Equal(6, f.Transport.Ids.Count);
         f.Transport.Drained();
     }
@@ -184,7 +184,7 @@ internal static class WorkspaceCases
         var file = BrowserDocument.OpenFile(path, f.Clock, Token);
         Check.Equal("File", file.Snapshot!.Provenance);
         Check.True(file.Snapshot.Version == null && file.Snapshot.Observation == null && !file.IsSynthetic);
-        Check.True(file.Metadata.Contains("nieznane") && file.Origin!.Path == path);
+        Check.True(file.Metadata.Contains("unknown") && file.Origin!.Path == path);
         Check.True(file.Snapshot.Entries[1].Source.GetProperty("extra").GetProperty("simulation")[0].GetBoolean());
         var original = BrowserWorkspace.Empty.Open(file).Present().Workspace;
         var displayed = original;
@@ -209,7 +209,7 @@ internal static class WorkspaceCases
         store.Save(original);
         f.Clock.Advance(TimeSpan.FromDays(3));
         var copy = Store(root, f.Clock).Load().Workspace;
-        Check.True(copy.Document.Origin == file.Origin && copy.Document.Metadata.Contains("Od importu 3 d"));
+        Check.True(copy.Document.Origin == file.Origin && copy.Document.Metadata.Contains("Since import 3 d"));
         Check.Equal(file.Snapshot.Source.GetRawText(), copy.Document.Snapshot!.Source.GetRawText());
 
         foreach (var row in BrowserResults.Select(copy.Document, new()).Hits)
@@ -221,8 +221,8 @@ internal static class WorkspaceCases
         string generation = Path.Combine(f.DirectoryPath, "active.json");
         var declared = BrowserDocument.OpenFile(generation, f.Clock, Token);
         Check.Equal("File", declared.Snapshot!.Provenance);
-        Check.True(!declared.IsSynthetic && declared.Metadata.Contains("Według pliku (SimulatedWorldwide)") &&
-            declared.Metadata.Contains("1 godz.") && declared.Snapshot.Observation!.RetrievedAt < declared.Origin!.OpenedAt);
+        Check.True(!declared.IsSynthetic && declared.Metadata.Contains("Declared by file (SimulatedWorldwide)") &&
+            declared.Metadata.Contains("1 h") && declared.Snapshot.Observation!.RetrievedAt < declared.Origin!.OpenedAt);
         store.Save(BrowserWorkspace.Empty.Open(declared));
         var restored = Store(root, f.Clock).Load().Workspace.Document;
         Check.Equal(declared.Snapshot.Observation, restored.Snapshot!.Observation);
@@ -381,7 +381,7 @@ internal static class WorkspaceCases
             File.WriteAllText(active, damaged);
             var reader = Store(root, clock);
             var read = reader.Load();
-            Check.True(!read.CanSave && read.Warning!.Contains("poprzedni"));
+            Check.True(!read.CanSave && read.Warning!.Contains("Previous"));
             Check.Equal(first.Document.Snapshot!.Version, read.Workspace.Document.Snapshot!.Version);
             await Check.Throws<InvalidOperationException>(() => Task.Run(() => reader.Save(next)));
             Check.Equal(damaged, File.ReadAllText(active));

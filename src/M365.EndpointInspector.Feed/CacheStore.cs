@@ -203,7 +203,7 @@ internal sealed class CacheStore
     internal static EndpointSnapshot ImportSnapshotFile(ReadOnlySpan<byte> bytes, DateTimeOffset importedAt)
     {
         var data = ReadChecked<Generation>(bytes, FileImportJson);
-        if (data.Format != 1) throw new InvalidDataException("Nieobsługiwany format migawki Feed.");
+        if (data.Format != 1) throw new InvalidDataException("Unsupported Feed snapshot format.");
         return WorldwideImporter.ImportFile(data.Endpoints, importedAt, data.Observation);
     }
 

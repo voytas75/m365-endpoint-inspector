@@ -12,7 +12,8 @@ public sealed record WorkspaceLoad(BrowserWorkspace Workspace, string? Warning, 
 public sealed class WorkspaceStore
 {
     private sealed record SavedWorkspace(SavedDocument? Current, SavedDocument? Reference,
-        BrowserFilter Applied, BrowserFilter Draft, int? SelectedId, WindowPlacement? Window, JsonElement? HitsLayout = null, JsonElement? CommonLayout = null);
+        BrowserFilter Applied, BrowserFilter Draft, int? SelectedId, WindowPlacement? Window, JsonElement? HitsLayout = null, JsonElement? CommonLayout = null,
+        JsonElement? SourceFieldsExpanded = null, JsonElement? ComparisonExpanded = null);
 
     // Keep the source text shown in the detail pane across a save/reopen cycle.
     private sealed class SourceJsonConverter : JsonConverter<JsonElement>
@@ -42,7 +43,7 @@ public sealed class WorkspaceStore
     {
         if (!Path.IsPathFullyQualified(root) ||
             root.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains(".."))
-            throw new ArgumentException("Katalog stanu musi mieć pełną ścieżkę bez segmentów nadrzędnych.");
+            throw new ArgumentException("The state directory requires a full path without parent segments.");
         this.root = root;
         this.clock = clock;
     }
@@ -62,27 +63,29 @@ public sealed class WorkspaceStore
         var rootElement = document.RootElement;
         if (rootElement.ValueKind != JsonValueKind.Object || !rootElement.TryGetProperty("Format", out var format) ||
             format.ValueKind != JsonValueKind.Number || !format.TryGetInt32(out int version) || version != 1)
-            throw new InvalidDataException("Nieobsługiwana wersja stanu.");
+            throw new InvalidDataException("Unsupported state version.");
         if (rootElement.GetPropertyCount() != 3 || !rootElement.TryGetProperty("Workspace", out var data) ||
             data.ValueKind != JsonValueKind.Object || !rootElement.TryGetProperty("Sha256", out var digest) ||
             digest.ValueKind != JsonValueKind.String ||
             digest.GetString() != Convert.ToHexString(SHA256.HashData(JsonMarshal.GetRawUtf8Value(data))))
-            throw new InvalidDataException("Błędna suma kontrolna lub koperta stanu.");
+            throw new InvalidDataException("Invalid state checksum or envelope.");
         var saved = data.Deserialize<SavedWorkspace>(Json)!;
         var now = clock.GetUtcNow();
         var doc = saved.Current == null ? BrowserDocument.Empty : BrowserDocument.Restore(saved.Current, now);
         var reference = saved.Reference == null ? null : BrowserDocument.Restore(saved.Reference, now);
         if (reference != null && !(doc.IsSynthetic && reference.IsSynthetic))
-            throw new InvalidDataException("Odniesienie wymaga dwóch migawek Synthetic.");
+            throw new InvalidDataException("A reference requires two Synthetic snapshots.");
         ValidateFilter(saved.Applied);
         ValidateFilter(saved.Draft);
         saved.Window?.Validate();
         var results = BrowserResults.Select(doc, saved.Applied, reference);
         if (results.FilterError != null || saved.SelectedId is int id &&
             !results.Hits.Concat(results.Common).Any(row => row.Entry.Id == id))
-            throw new InvalidDataException("Niepoprawny zastosowany filtr lub wybrane ID.");
+            throw new InvalidDataException("Invalid applied filter or selected ID.");
         return new(doc, saved.Applied, saved.Draft, reference, saved.SelectedId, saved.Window,
-            GridLayout.Read(saved.HitsLayout), GridLayout.Read(saved.CommonLayout));
+            GridLayout.Read(saved.HitsLayout), GridLayout.Read(saved.CommonLayout),
+            saved.SourceFieldsExpanded?.ValueKind == JsonValueKind.True,
+            saved.ComparisonExpanded?.ValueKind == JsonValueKind.True);
     }
 
     private static void ValidateFilter(BrowserFilter filter)
@@ -90,7 +93,7 @@ public sealed class WorkspaceStore
         if (!Defined(filter.Area) || !Defined(filter.Category) || !Defined(filter.Protocol) || !Defined(filter.Change) ||
             new[] { filter.Ports, filter.Domain, filter.Address, filter.DisplayName, filter.Notes, filter.Pointer,
                 filter.JsonValue }.Any(value => value == null || value.Length > 16384))
-            throw new InvalidDataException("Niepoprawne pola formularza filtra.");
+            throw new InvalidDataException("Invalid filter form fields.");
         static bool Defined<T>(T? value) where T : struct, Enum => value == null || Enum.IsDefined(value.Value);
     }
 
@@ -120,11 +123,11 @@ public sealed class WorkspaceStore
             {
                 var previous = ReadOptional(Leaf("workspace.previous.json"));
                 if (previous != null)
-                    return new(Decode(previous), $"Odtworzono poprzedni stan. Zapis wstrzymany. {error ?? "Brak bieżącego pliku."}", false);
+                    return new(Decode(previous), $"Previous state restored. Saving suspended. {error ?? "Current file missing."}", false);
             }
             catch (Exception ex) when (IsDataError(ex)) { error = $"{error} {ex.Message}".Trim(); }
             canSave = error == null;
-            return new(BrowserWorkspace.Empty, canSave ? null : $"Nie udało się odtworzyć stanu. Zapis wstrzymany. {error}", canSave);
+            return new(BrowserWorkspace.Empty, canSave ? null : $"Could not restore state. Saving suspended. {error}", canSave);
         }
     }
 
@@ -132,7 +135,7 @@ public sealed class WorkspaceStore
     {
         lock (gate)
         {
-            if (!canSave) throw new InvalidOperationException("Zapis stanu jest wstrzymany.");
+            if (!canSave) throw new InvalidOperationException("State saving is suspended.");
             ValidateFilter(workspace.Applied);
             ValidateFilter(workspace.Draft);
             workspace.Window?.Validate();
@@ -142,11 +145,13 @@ public sealed class WorkspaceStore
             Directory.CreateDirectory(root);
             using var lease = new FileStream(leasePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
             if (Hash(ReadOptional(active)) != expectedHash)
-                throw new IOException("Stan na dysku zmienił się po otwarciu okna. Zachowano plik.");
+                throw new IOException("On-disk state changed after the window opened. File preserved.");
             if (ReadOptional(previous) is { } backup) Decode(backup);
             var data = new SavedWorkspace(workspace.Document.Pack(), workspace.Reference?.Pack(),
                 workspace.Applied, workspace.Draft, workspace.SelectedId, workspace.Window,
-                (workspace.HitsLayout ?? GridLayout.Default).Pack(), (workspace.CommonLayout ?? GridLayout.Default).Pack());
+                (workspace.HitsLayout ?? GridLayout.Default).Pack(), (workspace.CommonLayout ?? GridLayout.Default).Pack(),
+                JsonSerializer.SerializeToElement(workspace.SourceFieldsExpanded),
+                JsonSerializer.SerializeToElement(workspace.ComparisonExpanded));
             string? nextHash = null;
             AtomicFile.Write(active, stream =>
             {

@@ -27,7 +27,7 @@ internal static class CsvImportCases
         void Reject(string s)
         {
             try { Read(s); throw new InvalidOperationException("Accepted invalid CSV"); }
-            catch (FormatException ex) { if (!ex.Message.Contains("wiersz") || !ex.Message.Contains("kolumna")) throw; }
+            catch (FormatException ex) { if (!ex.Message.Contains("row") || !ex.Message.Contains("column")) throw; }
         }
         Reject(csv + ",extra");
         Reject(csv.Replace("Common", "UnknownArea"));

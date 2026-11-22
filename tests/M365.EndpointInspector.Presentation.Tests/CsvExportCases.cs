@@ -23,9 +23,27 @@ internal static class CsvExportCases
             BrowserCsvExport.Capture(w, r.Hits, r.Common, common ?? r.ShowCommon, w.Draft);
         var captured = Capture(workspace, display.Results);
         var rows = Parse(captured.CopyBytes());
+        Check.Equal("Section,ID,Obszar,Kategoria,Wymagany,Domeny,Adresy IP / CIDR,Porty TCP,Porty UDP,Nazwa usługi,ExpressRoute,Zmiana,RowOrigin,SourceKind,Provenance,Generation,Version,TimeBasis,ImportedAt,OpenedAt,ObservationSource,VersionObservedAt,RetrievedAt",
+            string.Join(",", rows[0]));
+        Check.Equal("Yes", display.Results.Hits[0].Required);
+        Check.Equal("Tak", rows[1][4]);
+        Check.Equal("Tak", rows[1][10]);
+        foreach (var kind in Enum.GetValues<ChangeKind>())
+        {
+            var comparison = workspace with { Reference = Open("synthetic-1"), Applied = new() { Change = kind } };
+            var result = comparison.Present().Results;
+            var legacy = kind switch
+            {
+                ChangeKind.Added => "Dodany", ChangeKind.Modified => "Zmieniony",
+                ChangeKind.Removed => "Usunięty", _ => "Bez zmian"
+            };
+            Check.True(result.Hits.All(row => row.ChangeSortKey == legacy));
+            foreach (var cells in Parse(Capture(comparison, result).CopyBytes()).Skip(1))
+                Check.Equal(legacy, cells[11]);
+        }
         Check.Equal("101,104,103", string.Join(",", rows.Skip(1).Select(r => r[1])));
         Check.Equal("Hits,Common,Common", string.Join(",", rows.Skip(1).Select(r => r[0])));
-        Check.True(captured.Message.Contains("błędnego filtra") && workspace.Applied != workspace.Draft);
+        Check.True(captured.Message.Contains("invalid draft filter") && workspace.Applied != workspace.Draft);
         Check.Equal(2, Parse(Capture(workspace, display.Results, false).CopyBytes()).Count);
         var reversed = BrowserCsvExport.Capture(workspace, display.Results.Hits.Reverse(),
             display.Results.Common.Reverse(), true, workspace.Draft);
@@ -103,6 +121,8 @@ internal static class CsvExportCases
         Check.True(!File.Exists(absent));
         Check.True(!Directory.EnumerateFiles(root).Any(p => p.EndsWith(".original")));
 
+        var grid = XDocument.Load(Path.Combine(repo, "src/M365.EndpointInspector.Wpf/EndpointGrid.xaml"));
+        Check.True(grid.Descendants().Any(e => (string?)e.Attribute("SortMemberPath") == "ChangeSortKey" && (string?)e.Attribute("Header") == "Change"));
         var window = XDocument.Load(Path.Combine(repo, "src/M365.EndpointInspector.Wpf/MainWindow.xaml"));
         Check.True(window.Descendants().Any(e => (string?)e.Attribute("Click") == "ExportCsv_Click"));
         string code = File.ReadAllText(Path.Combine(repo, "src/M365.EndpointInspector.Wpf/MainWindow.xaml.cs"));

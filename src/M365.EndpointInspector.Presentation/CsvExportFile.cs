@@ -20,7 +20,7 @@ public sealed class CsvExportFile
     public void Save(BrowserCsvExport export, bool overwriteApproved, CancellationToken token = default)
     {
         token.ThrowIfCancellationRequested();
-        if (Exists && !overwriteApproved) throw new InvalidOperationException("Nadpisanie nie zostało zatwierdzone.");
+        if (Exists && !overwriteApproved) throw new InvalidOperationException("Overwrite was not approved.");
         string temporary = Path.Combine(Path.GetDirectoryName(path)!, Path.GetRandomFileName());
         string backup = temporary + ".original";
         bool displaced = false;
@@ -40,7 +40,7 @@ public sealed class CsvExportFile
                 displaced = true;
                 RejectLink(backup);
                 if (!CryptographicOperations.FixedTimeEquals(expected, Digest(backup)))
-                    throw new IOException("Plik zmienił się po zatwierdzeniu. Nie zapisano eksportu.");
+                    throw new IOException("File changed after approval. Export was not saved.");
             }
             // Same-directory atomic publication. If another writer creates the target, refuse.
             File.Move(temporary, path, overwrite: false);
@@ -52,7 +52,7 @@ public sealed class CsvExportFile
                 try { File.Move(backup, path, overwrite: false); }
                 catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
                 {
-                    throw new IOException($"Nie zapisano eksportu. Inny zapis zajął cel; zachowano oryginał w {backup}.");
+                    throw new IOException($"Export was not saved. Another writer occupied the destination; original preserved at {backup}.");
                 }
             }
             throw;
@@ -78,6 +78,6 @@ public sealed class CsvExportFile
     private static void RejectLink(string path)
     {
         if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-            throw new IOException("Eksport nie zastępuje dowiązań plików.");
+            throw new IOException("Export does not replace symbolic links.");
     }
 }

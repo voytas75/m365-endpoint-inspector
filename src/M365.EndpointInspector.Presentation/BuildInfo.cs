@@ -15,7 +15,7 @@ public sealed class BuildInfo
         var parts = info?.Split('+');
         if (parts is not [var version, var digest] || version.Length == 0 ||
             digest.Length != 64 || !digest.All(char.IsAsciiHexDigit))
-            throw new InvalidDataException("Brak metadanych wersji lub sumy źródeł aplikacji.");
+            throw new InvalidDataException("Application version or source checksum metadata is missing.");
 
         var configuration = application.GetCustomAttribute<AssemblyConfigurationAttribute>()?.Configuration;
         Policy = compiledForDebug && configuration == "Debug" ? RefreshPolicy.ManualDevelopment : RefreshPolicy.Release;

@@ -1,22 +1,22 @@
 # M365 Endpoint Inspector
 
-Lokalna przeglądarka wymagań sieciowych Microsoft 365 dla Windows, napisana w C# na .NET 10 i WPF. Wersja rozwojowa **v0.3.4-dev**.
+A local browser of Microsoft 365 network requirements for Windows, written in C# using .NET 10 and WPF. Development version **v0.3.4-dev**.
 
-- Pobiera wykaz Worldwide na żądanie albo otwiera lokalny plik JSON lub CSV.
-- Filtruje i porządkuje wymagania, pokazuje szczegóły wpisów i eksportuje widok do CSV.
-- Zachowuje lokalnie źródło, filtry, zaznaczenie i układ tabel. Dwie przykładowe migawki syntetyczne pozwalają sprawdzić porównywanie wpisów bez pobierania danych.
+- Downloads the Worldwide list on request or opens a local JSON or CSV file.
+- Filters and organizes requirements, shows entry details, and exports the view to CSV.
+- Locally preserves the source, filters, selection, and table layout. Two sample synthetic snapshots let you test entry comparison without downloading data.
 
-Aplikacja pokazuje wymagania Microsoft; nie mierzy jeszcze dostępności endpointów.
+The application displays Microsoft requirements; it does not yet measure endpoint availability.
 
-## Budowanie i uruchamianie
+## Building and running
 
-Na Windows, z .NET SDK wskazanym w `global.json`, wykonaj w katalogu repozytorium:
+On Windows, with the .NET SDK specified in `global.json`, run these commands from the repository directory:
 
 ```powershell
 dotnet build M365.EndpointInspector.slnx
 dotnet run --project src/M365.EndpointInspector.Wpf
 ```
 
-Źródłem wymagań dla planowanej edycji Worldwide jest Microsoft. Dokumentacja usługi opisuje dostęp do danych i wersjonowanie, a wykaz adresów objaśnia zakresy, kategorie i obszary usług. [Usługa internetowa Microsoft 365 IP Address and URL](https://learn.microsoft.com/en-us/microsoft-365/enterprise/microsoft-365-ip-web-service?view=o365-worldwide) · [Adresy URL i zakresy adresów IP Microsoft 365](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges?view=o365-worldwide)
+Microsoft is the source of requirements for the planned Worldwide edition. The service documentation describes data access and versioning, while the address list explains ranges, categories, and service areas. [Microsoft 365 IP Address and URL web service](https://learn.microsoft.com/en-us/microsoft-365/enterprise/microsoft-365-ip-web-service?view=o365-worldwide) · [Microsoft 365 URLs and IP address ranges](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges?view=o365-worldwide)
 
-Projekt jest udostępniany na [licencji MIT](LICENSE).
+The project is available under the [MIT license](LICENSE).

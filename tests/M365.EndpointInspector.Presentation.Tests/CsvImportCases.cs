@@ -17,7 +17,7 @@ internal static class CsvImportCases
         Check.True(doc.Origin!.Csv && doc.SourceLabel.Contains("CSV"));
         string rawSource = doc.Snapshot!.Source.GetRawText();
         byte[] originalFile = File.ReadAllBytes(path);
-        const string prefix = "Reprezentacja JSON utworzona z CSV (nie oryginalny JSON).\n";
+        const string prefix = "JSON representation converted from CSV (not original JSON).\n";
         string preview = BrowserResults.Select(doc, new()).Hits.Single().RawJson;
         Check.True(preview.StartsWith(prefix));
         Program.AssertReadablePreview(doc.Snapshot.Entries[1].Source, preview[prefix.Length..]);
@@ -25,7 +25,7 @@ internal static class CsvImportCases
         Check.True(originalFile.SequenceEqual(File.ReadAllBytes(path)));
         Check.Equal(rawSource, doc.Snapshot.Source.GetRawText());
         var workspace = BrowserWorkspace.Empty.Open(doc).Present().Workspace;
-        Check.True(BrowserResults.Select(doc, new()).Hits.Single().RawJson.Contains("utworzona z CSV"));
+        Check.True(BrowserResults.Select(doc, new()).Hits.Single().RawJson.Contains("converted from CSV"));
         var store = new WorkspaceStore(Path.Combine(root, "csv-workspace"), TimeProvider.System);
         store.Load(); store.Save(workspace);
         File.Delete(path);
@@ -40,7 +40,7 @@ internal static class CsvImportCases
         Check.True(Encoding.UTF8.GetString(export.CopyBytes()).Contains("FileCsv"));
         File.WriteAllBytes(path, [0xff]);
         try { BrowserDocument.OpenFile(path, TimeProvider.System, CancellationToken.None); throw new Exception("invalid UTF8 accepted"); }
-        catch (FormatException ex) { Check.True(ex.Message.Contains("wiersz 1, kolumna 1")); }
+        catch (FormatException ex) { Check.True(ex.Message.Contains("row 1, column 1")); }
         Check.True(BrowserResults.Select(restored.Workspace.Document, new()).Hits.Single().RepresentationLabel.Contains("CSV"));
         File.WriteAllBytes(path, export.CopyBytes());
         try { BrowserDocument.OpenFile(path, TimeProvider.System, CancellationToken.None); throw new Exception("own export accepted"); }

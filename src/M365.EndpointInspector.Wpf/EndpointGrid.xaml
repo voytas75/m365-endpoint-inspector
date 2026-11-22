@@ -10,15 +10,15 @@
           BorderBrush="{StaticResource Rule}" Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}">
     <DataGrid.Columns>
         <DataGridTextColumn SortMemberPath="Entry.Id" Header="ID" Binding="{Binding Entry.Id}" Width="54"/>
-        <DataGridTextColumn SortMemberPath="Entry.ServiceArea" Header="Obszar" Binding="{Binding Entry.ServiceArea}" Width="90"/>
-        <DataGridTextColumn SortMemberPath="Entry.Category" Header="Kategoria" Binding="{Binding Entry.Category}" Width="83"/>
-        <DataGridTextColumn SortMemberPath="Required" Header="Wymagany" Binding="{Binding Required}" Width="86"/>
-        <DataGridTextColumn SortMemberPath="Domains" Header="Domeny" Binding="{Binding Domains}" Width="180"/>
-        <DataGridTextColumn SortMemberPath="Addresses" Header="Adresy IP / CIDR" Binding="{Binding Addresses}" Width="165"/>
-        <DataGridTextColumn SortMemberPath="Tcp" Header="Porty TCP" Binding="{Binding Tcp}" Width="118"/>
-        <DataGridTextColumn SortMemberPath="Udp" Header="Porty UDP" Binding="{Binding Udp}" Width="100"/>
-        <DataGridTextColumn SortMemberPath="Entry.ServiceAreaDisplayName" Header="Nazwa usługi" Binding="{Binding Entry.ServiceAreaDisplayName}" Width="160"/>
+        <DataGridTextColumn SortMemberPath="Entry.ServiceArea" Header="Area" Binding="{Binding Entry.ServiceArea}" Width="90"/>
+        <DataGridTextColumn SortMemberPath="Entry.Category" Header="Category" Binding="{Binding Entry.Category}" Width="83"/>
+        <DataGridTextColumn SortMemberPath="Required" Header="Required" Binding="{Binding Required}" Width="86"/>
+        <DataGridTextColumn SortMemberPath="Domains" Header="Domains" Binding="{Binding Domains}" Width="180"/>
+        <DataGridTextColumn SortMemberPath="Addresses" Header="IP addresses / CIDR" Binding="{Binding Addresses}" Width="165"/>
+        <DataGridTextColumn SortMemberPath="Tcp" Header="TCP ports" Binding="{Binding Tcp}" Width="118"/>
+        <DataGridTextColumn SortMemberPath="Udp" Header="UDP ports" Binding="{Binding Udp}" Width="100"/>
+        <DataGridTextColumn SortMemberPath="Entry.ServiceAreaDisplayName" Header="Service name" Binding="{Binding Entry.ServiceAreaDisplayName}" Width="160"/>
         <DataGridTextColumn SortMemberPath="ExpressRoute" Header="ExpressRoute" Binding="{Binding ExpressRoute}" Width="100"/>
-        <DataGridTextColumn x:Name="ChangeColumn" SortMemberPath="Change" Header="Zmiana" Binding="{Binding Change}" Width="92" Visibility="Collapsed"/>
+        <DataGridTextColumn x:Name="ChangeColumn" SortMemberPath="ChangeSortKey" Header="Change" Binding="{Binding Change}" Width="92" Visibility="Collapsed"/>
     </DataGrid.Columns>
 </DataGrid>

@@ -32,6 +32,7 @@ internal static class Program
 
         (string Name, Action Run)[] groups =
         [
+            ("independent expander preferences, legacy restore and validation wiring", () => ExpanderCases.Run(repo!.FullName, root)),
             ("bounded independent grid layout and legacy restore", () => GridLayoutCases.Run(repo!.FullName, root)),
             ("CSV file, details, restore, cancel and failure continuity", () => CsvImportCases.Run(root)),
             ("bounded browser CSV capture and safe save", () => CsvExportCases.Run(repo!.FullName, root)),
@@ -93,16 +94,16 @@ internal static class Program
     {
         var empty = BrowserDocument.Empty;
         Check.True(empty.Snapshot == null);
-        Check.Equal("Brak danych", BrowserResults.Select(empty, new()).Summary);
+        Check.Equal("No data", BrowserResults.Select(empty, new()).Summary);
         string path = Path.Combine(root, "empty-synthetic.json");
         File.WriteAllText(path, """{"provenance":"Synthetic","version":"empty","importedAt":"2026-01-01T12:00:00Z","endpoints":[]}""",
             new UTF8Encoding(true));
         var document = BrowserDocument.OpenSynthetic(path, Clock, Token);
         Check.True(document.IsSynthetic && document.SourceLabel.Contains("Synthetic"));
-        Check.Equal("Pusta migawka (0 wpisów)", BrowserResults.Select(document, new()).Summary);
+        Check.Equal("Empty snapshot (0 entries)", BrowserResults.Select(document, new()).Summary);
         var demo = Open("synthetic-2");
         Check.True(demo.Metadata.Contains("synthetic-2") && demo.Metadata.Contains("2026-01-02 12:00:00 UTC") &&
-            demo.Metadata.Contains("2 d 1 godz. 15 min"));
+            demo.Metadata.Contains("2 d 1 h 15 min"));
     }
 
     private static void ImportErrors(string root)
@@ -148,7 +149,7 @@ internal static class Program
             var noHits = BrowserResults.Select(document, miss);
             Ids(noHits.Hits);
             Ids(noHits.Common, 104, 103);
-            Check.Equal("Brak trafień (0)", noHits.Summary);
+            Check.Equal("No hits (0)", noHits.Summary);
             Check.True(noHits.FilterError == null && noHits.ShowCommon);
         }
         var reset = BrowserResults.Select(document, new());
@@ -164,8 +165,8 @@ internal static class Program
         var document = Open("synthetic-2");
         var exchange = BrowserResults.Select(document, new() { Area = ServiceArea.Exchange });
         var row = exchange.Hits.Single();
-        Check.Equal("Tak", row.Required);
-        Check.Equal("Tak", row.ExpressRoute);
+        Check.Equal("Yes", row.Required);
+        Check.Equal("Yes", row.ExpressRoute);
         Check.Equal("443, 5000-5004", row.Tcp);
         Check.Equal("3478-3481", row.Udp);
         Check.Equal("*.mail.example.test, shared.example.test", row.Domains);
@@ -213,7 +214,7 @@ internal static class Program
         })
         {
             var invalid = Run(bad);
-            Check.Equal("Błąd filtra", invalid.Summary);
+            Check.Equal("Filter error", invalid.Summary);
             Check.True(!string.IsNullOrEmpty(invalid.FilterError) && invalid.Hits.Count == 0);
         }
         Ids(Run(new() { Protocol = Transport.Udp, Ports = "65535" }).Hits, 106);
@@ -239,7 +240,7 @@ internal static class Program
         Ids(Changes(ChangeKind.Modified).Hits, 101, 104);
         Ids(Changes(ChangeKind.Unchanged).Hits, 102, 103);
         var removed = Changes(ChangeKind.Removed).Hits.Single();
-        Check.Equal("Usunięty", removed.Change);
+        Check.Equal("Removed", removed.Change);
         AssertReadablePreview(baseline.Snapshot!.Entries[105].Source, removed.RawJson);
         Check.True(BrowserResults.Select(document, new() { Change = ChangeKind.Removed }).FilterError != null);
         Check.True(BrowserResults.Select(document, new(), BrowserDocument.Empty).FilterError != null);
@@ -253,9 +254,9 @@ internal static class Program
         await f.Seed(SimulatedTransport.Second);
         f.Clock.Advance(TimeSpan.FromDays(12));
         var active = BrowserDocument.OpenCache(f.DirectoryPath, f.Clock, Token);
-        Check.True(active.SourceLabel.Contains("SimulatedWorldwide") && active.SourceLabel.Contains("kopia aktywna"));
-        Check.True(active.Metadata.Contains("12 d 0 godz.") && active.Metadata.Contains(SimulatedTransport.Second) &&
-            active.Metadata.Contains("Wersję sprawdzono przed pobraniem"));
+        Check.True(active.SourceLabel.Contains("SimulatedWorldwide") && active.SourceLabel.Contains("active copy"));
+        Check.True(active.Metadata.Contains("12 d 0 h") && active.Metadata.Contains(SimulatedTransport.Second) &&
+            active.Metadata.Contains("The version was checked before content retrieval"));
         Check.True(active.Notice == null && !active.IsSynthetic);
         Ids(BrowserResults.Select(active, new()).Hits, 2, 1);
         Check.True(BrowserResults.Select(active, new(), Open("synthetic-1")).FilterError != null);
@@ -266,8 +267,8 @@ internal static class Program
         string broken = Path.Combine(fallbackDir, "active.json");
         File.WriteAllText(broken, "{");
         var fallback = BrowserDocument.OpenCache(fallbackDir, f.Clock, Token);
-        Check.True(fallback.SourceLabel.Contains("kopia zapasowa") && fallback.SourceLabel.Contains("symulowany"));
-        Check.True(fallback.Metadata.Contains(SimulatedTransport.First) && fallback.Metadata.Contains("12 d 1 godz."));
+        Check.True(fallback.SourceLabel.Contains("previous copy") && fallback.SourceLabel.Contains("Simulated"));
+        Check.True(fallback.Metadata.Contains(SimulatedTransport.First) && fallback.Metadata.Contains("12 d 1 h"));
         Check.True(fallback.Details!.Contains("active:"));
         Check.Equal("{", File.ReadAllText(broken));
         Ids(BrowserResults.Select(fallback, new()).Hits, 2, 1);
@@ -275,7 +276,7 @@ internal static class Program
         var missingDir = Path.Combine(f.Root, "MicrosoftWorldwide");
         Directory.CreateDirectory(missingDir);
         var missing = BrowserDocument.OpenCache(missingDir, f.Clock, Token);
-        Check.True(missing.SourceLabel.Contains("produkcyjny") && missing.SourceLabel.Contains("brak poprawnej kopii"));
+        Check.True(missing.SourceLabel.Contains("Production") && missing.SourceLabel.Contains("no valid cache copy"));
         Check.True(missing.Snapshot == null && missing.Details!.Contains("previous:"));
         Check.True(!Directory.EnumerateFileSystemEntries(missingDir).Any());
         Throws<ArgumentException>(() => BrowserDocument.OpenCache(f.Root, f.Clock, Token));

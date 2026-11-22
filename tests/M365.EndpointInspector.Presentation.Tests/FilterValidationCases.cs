@@ -111,7 +111,7 @@ internal static class FilterValidationCases
         Check.Equal("Border", banner.Name.LocalName);
         Check.Equal("{StaticResource FilterWarningBanner}", (string?)banner.Attribute("Style"));
         Check.True(Named("FilterProblem").Ancestors().Contains(banner) && Named("FilterProblemHeading").Ancestors().Contains(banner));
-        Check.Equal("⚠ Błąd filtra", (string?)Named("FilterProblemHeading").Attribute("Text"));
+        Check.Equal("⚠ Filter error", (string?)Named("FilterProblemHeading").Attribute("Text"));
         Check.Equal("Bold", (string?)Named("FilterProblemHeading").Attribute("FontWeight"));
         Check.Equal("", (string?)Named("FilterProblem").Attribute("Text"));
         var bannerStyle = Style("FilterWarningBanner");
@@ -121,7 +121,7 @@ internal static class FilterValidationCases
         var collapse = bannerStyle.Descendants().Single(e => e.Name.LocalName == "DataTrigger" &&
             (string?)e.Attribute("Binding") == "{Binding Text, ElementName=FilterProblem}" && (string?)e.Attribute("Value") == "");
         Check.True(Sets(collapse, "Visibility", "Collapsed"));
-        Check.True(code.Contains("Tabela zachowuje ostatni poprawny wynik") && code.Contains("ShowFilterErrors(display.FieldErrors)"));
+        Check.True(code.Contains("The table retains the last valid result") && code.Contains("ShowFilterErrors(display.FieldErrors)"));
         Check.True(code.Contains("message.Text = text.Length == 0 ? \"\" : $\"⚠ {text}\"") && code.Contains("SourceFields.IsExpanded = true"));
         Check.Equal("Bold", (string?)Named("FilterProblem").Attribute("FontWeight"));
         Check.Equal("Wrap", (string?)Named("FilterProblem").Attribute("TextWrapping"));

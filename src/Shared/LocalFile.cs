@@ -7,7 +7,7 @@ internal static class LocalFile
     {
         if (!Path.IsPathFullyQualified(path) ||
             path.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar).Contains(".."))
-            throw new ArgumentException("Wymagana jest pełna ścieżka bez segmentów nadrzędnych.");
+            throw new ArgumentException("A full path without parent segments is required.");
         var file = new FileInfo(path);
         RejectLink(file);
         for (var parent = file.Directory; parent != null; parent = parent.Parent)
@@ -18,7 +18,7 @@ internal static class LocalFile
     private static void RejectLink(FileSystemInfo entry)
     {
         if (entry.LinkTarget != null || entry.Exists && entry.Attributes.HasFlag(FileAttributes.ReparsePoint))
-            throw new IOException($"Odmowa dostępu przez dowiązanie: {entry.Name}");
+            throw new IOException($"Access through a symbolic link denied: {entry.Name}");
     }
 
     internal static byte[] ReadBytes(string path, int limit)
@@ -26,10 +26,10 @@ internal static class LocalFile
         using var stream = new FileStream(CheckedPath(path), FileMode.Open, FileAccess.Read,
             FileShare.Read | FileShare.Delete);
         long length = stream.Length;
-        if (length > limit) throw new InvalidDataException($"Plik przekracza limit {limit} bajtów.");
+        if (length > limit) throw new InvalidDataException($"File exceeds the {limit}-byte limit.");
         var bytes = new byte[(int)length];
         stream.ReadExactly(bytes);
-        if (stream.ReadByte() != -1) throw new IOException("Plik zmienił się podczas odczytu.");
+        if (stream.ReadByte() != -1) throw new IOException("File changed while being read.");
         return bytes;
     }
 }

@@ -32,8 +32,8 @@ public sealed class BrowserDocument
     private BrowserDocument(EndpointSnapshot? snapshot, SourceInfo? origin, string label, string metadata, string? notice = null, string? details = null)
         => (Snapshot, Origin, SourceLabel, Metadata, Notice, Details) = (snapshot, origin, label, metadata, notice, details);
 
-    public static BrowserDocument Empty { get; } = new(null, null, "Brak otwartej migawki",
-        "Pobierz wymagania Worldwide lub otwórz lokalny plik JSON/CSV.");
+    public static BrowserDocument Empty { get; } = new(null, null, "No snapshot open",
+        "Download Worldwide requirements or open a local JSON/CSV file.");
 
     public static BrowserDocument OpenFile(string path, TimeProvider clock, CancellationToken token) =>
         ReadFile(path, clock, token, syntheticOnly: false);
@@ -64,7 +64,7 @@ public sealed class BrowserDocument
         {
             // Only a checked cache generation may exceed the wire limit after JSON escaping.
             try { snapshot = WorldwideFeed.ImportSnapshotFile(body.Span, now); }
-            catch (JsonException ex) { throw new InvalidDataException("Plik JSON przekracza limit 4 MiB dla listy lub koperty Synthetic.", ex); }
+            catch (JsonException ex) { throw new InvalidDataException("JSON file exceeds the 4 MiB limit for an array or Synthetic envelope.", ex); }
         }
         else
         {
@@ -80,7 +80,7 @@ public sealed class BrowserDocument
                 else
                     snapshot = SyntheticImporter.Import(root);
             }
-            catch (JsonException ex) when (syntheticOnly) { throw new FormatException($"Błędny JSON Synthetic. {ex.Message}", ex); }
+            catch (JsonException ex) when (syntheticOnly) { throw new FormatException($"Invalid Synthetic JSON. {ex.Message}", ex); }
         }
         token.ThrowIfCancellationRequested();
         var kind = snapshot.Provenance == "Synthetic" ? BrowserSource.Synthetic : BrowserSource.File;
@@ -93,13 +93,13 @@ public sealed class BrowserDocument
         token.ThrowIfCancellationRequested();
         var now = clock.GetUtcNow();
         string? details = result.Error == "Further requests deferred by Retry-After."
-            ? "Serwer odroczył kolejne żądanie." : result.Error;
+            ? "The server deferred the next request." : result.Error;
         if (result.Cache.Error is { } cacheError)
-            details = string.Join("\n", new[] { details, $"Odczyt cache: {cacheError}" }.OfType<string>());
+            details = string.Join("\n", new[] { details, $"Cache read: {cacheError}" }.OfType<string>());
         var origin = new SourceInfo(BrowserSource.Internet, now, null, result.Cache.Generation, result.Status,
             result.LastVersionCheck, result.NextCheck, details, result.VersionCheckedBeforeDeferral);
         if (result.Cache.Snapshot is not { } snapshot)
-            throw new InvalidDataException($"{RefreshNotice(origin)} Brak poprawnej kopii Worldwide.", Diagnostic(RefreshDetails(origin)));
+            throw new InvalidDataException($"{RefreshNotice(origin)} No valid Worldwide cache copy.", Diagnostic(RefreshDetails(origin)));
         return Describe(snapshot, origin, now);
     }
 
@@ -110,7 +110,7 @@ public sealed class BrowserDocument
         string? root = directory.Parent?.FullName;
         if (root is null || !Enum.TryParse<WorldwideSource>(directory.Name, true, out var source) ||
             !string.Equals(Enum.GetName(source), directory.Name, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Wybierz katalog MicrosoftWorldwide lub SimulatedWorldwide wewnątrz katalogu danych maszyny.");
+            throw new ArgumentException("Select the MicrosoftWorldwide or SimulatedWorldwide folder inside the machine data directory.");
         using var offlineClient = new HttpClient(new OfflineHandler());
         var feed = source == WorldwideSource.MicrosoftWorldwide
             ? WorldwideFeed.CreateMicrosoft(root, clock)
@@ -118,8 +118,8 @@ public sealed class BrowserDocument
         var cache = feed.ReadCache();
         token.ThrowIfCancellationRequested();
         if (cache.Snapshot is not { } snapshot)
-            return new(null, null, $"{TransportLabel(source)} · brak poprawnej kopii", "Brak danych do wyświetlenia.",
-                "Nie udało się odczytać lokalnej migawki.", cache.Error);
+            return new(null, null, $"{TransportLabel(source)} · no valid cache copy", "No data to display.",
+                "Could not read the local snapshot.", cache.Error);
         var now = clock.GetUtcNow();
         return Describe(snapshot, new(BrowserSource.Cache, now, directory.FullName, cache.Generation, Error: cache.Error), now);
     }
@@ -140,14 +140,14 @@ public sealed class BrowserDocument
             (origin.Kind != BrowserSource.Internet && (origin.NextCheck != null || origin.LastCheck != null)) ||
             (origin.VersionCheckedBeforeDeferral && origin.Status != RefreshStatus.Deferred) ||
             origin.NextCheck < origin.LastCheck || (!cached && origin.Error != null))
-            throw new InvalidDataException("Niepoprawne metadane pochodzenia migawki.");
+            throw new InvalidDataException("Invalid snapshot provenance metadata.");
         var snapshot = origin.Kind switch
         {
             BrowserSource.Synthetic when saved.Observation == null => SyntheticImporter.Import(saved.Payload),
             BrowserSource.File => WorldwideImporter.ImportFile(saved.Payload, origin.OpenedAt, saved.Observation),
             BrowserSource.Cache or BrowserSource.Internet when saved.Observation != null =>
                 WorldwideImporter.Import(saved.Payload, saved.Observation),
-            _ => throw new InvalidDataException("Niespójne pochodzenie migawki.")
+            _ => throw new InvalidDataException("Inconsistent snapshot provenance.")
         };
         return Describe(snapshot, origin, now);
     }
@@ -156,71 +156,73 @@ public sealed class BrowserDocument
     {
         var observation = snapshot.Observation;
         if (origin.Kind == BrowserSource.Synthetic)
-            return new(snapshot, origin, "Dane syntetyczne · Synthetic",
-                $"Wersja {snapshot.Version}   ·   Import wg pliku {Utc(snapshot.ImportedAt)}   ·   Wiek przy otwarciu {Age(now - snapshot.ImportedAt)}\n" +
-                $"Otwarcie pliku {Utc(origin.OpenedAt)} · {origin.Path}");
+            return new(snapshot, origin, "Synthetic data · Synthetic",
+                $"Version {snapshot.Version}   ·   Import declared by file {Utc(snapshot.ImportedAt)}   ·   Age at opening {Age(now - snapshot.ImportedAt)}\n" +
+                $"File opened {Utc(origin.OpenedAt)} · {origin.Path}");
         if (origin.Kind == BrowserSource.File)
         {
-            string metadata = observation == null ? "Wersja i czas pobrania treści nieznane." :
-                $"Według pliku ({observation.Source}): {ObservationText(observation, now)}";
-            return new(snapshot, origin, origin.Csv ? "Plik · import CSV" : "Plik · import JSON", metadata +
-                $"\nImport {Utc(origin.OpenedAt)} · Od importu {Age(now - origin.OpenedAt)} · {origin.Path}");
+            string metadata = observation == null ? "Version and content retrieval time unknown." :
+                $"Declared by file ({observation.Source}): {ObservationText(observation, now)}";
+            return new(snapshot, origin, origin.Csv ? "File · CSV import" : "File · JSON import", metadata +
+                $"\nImport {Utc(origin.OpenedAt)} · Since import {Age(now - origin.OpenedAt)} · {origin.Path}");
         }
-        string generation = origin.Generation == CacheGeneration.Active ? "kopia aktywna" : "kopia zapasowa";
+        string generation = origin.Generation == CacheGeneration.Active ? "active copy" : "previous copy";
         string label = TransportLabel(observation!.Source);
         if (origin.Kind == BrowserSource.Internet) label = $"Internet · {label}";
         return new(snapshot, origin, $"{label} · {generation}", ObservationText(observation, now),
             origin.Kind == BrowserSource.Internet ? RefreshNotice(origin) :
-                origin.Error == null ? null : "Nie udało się odczytać kopii aktywnej.", RefreshDetails(origin));
+                origin.Error == null ? null : "Could not read the active cache copy.", RefreshDetails(origin));
     }
 
     private static string TransportLabel(WorldwideSource source) => source == WorldwideSource.MicrosoftWorldwide
-        ? "Cache produkcyjny · MicrosoftWorldwide" : "Cache symulowany · SimulatedWorldwide";
+        ? "Production cache · MicrosoftWorldwide" : "Simulated cache · SimulatedWorldwide";
 
     private static string ObservationText(WorldwideObservation observation, DateTimeOffset now) =>
-        $"Wersja zaobserwowana {observation.ObservedVersion} ({Utc(observation.VersionObservedAt)})   ·   " +
-        $"Pobranie {Utc(observation.RetrievedAt)}   ·   Wiek przy otwarciu {Age(now - observation.RetrievedAt)}\n" +
-        "Wersję sprawdzono przed pobraniem treści. W międzyczasie mogło zmienić się wydanie.";
+        $"Observed version {observation.ObservedVersion} ({Utc(observation.VersionObservedAt)})   ·   " +
+        $"Retrieved {Utc(observation.RetrievedAt)}   ·   Age at opening {Age(now - observation.RetrievedAt)}\n" +
+        "The version was checked before content retrieval. The release may have changed in between.";
 
     private static string RefreshNotice(SourceInfo origin)
     {
         string status = origin.Status switch
         {
-            RefreshStatus.Updated => "Pobrano treść.",
-            RefreshStatus.Unchanged => "Wersja bez zmian.",
+            RefreshStatus.Updated => "Content downloaded.",
+            RefreshStatus.Unchanged => "Version unchanged.",
             RefreshStatus.Deferred when origin.VersionCheckedBeforeDeferral =>
-                "Sprawdzono wersję. Serwer odroczył pobranie treści.",
+                "Version checked. The server deferred content retrieval.",
             // Older workspaces used the same status and reason for both kinds of deferral.
             RefreshStatus.Deferred when origin.Error?.StartsWith("Further requests deferred by Retry-After.", StringComparison.Ordinal) == true =>
-                "Pobranie treści odroczone przez serwer.",
-            RefreshStatus.Deferred => "Kontrola odroczona. Nie wysłano żądania.",
-            RefreshStatus.Throttled => "Serwer ograniczył żądania (HTTP 429).",
-            RefreshStatus.TimedOut => "Upłynął czas pobierania.",
+                "Content retrieval deferred by the server.",
+            RefreshStatus.Deferred => "Check deferred. No request sent.",
+            RefreshStatus.Throttled => "The server limited requests (HTTP 429).",
+            RefreshStatus.TimedOut => "Download timed out.",
             _ when origin.Error?.StartsWith("endpoints[", StringComparison.Ordinal) == true =>
-                "Odrzucono odpowiedź. Dane endpointu nie przeszły walidacji.",
-            _ => "Nie udało się pobrać danych."
+                "Response rejected. Endpoint data failed validation.",
+            _ => "Could not download data."
         };
-        string next = origin.NextCheck is { } date ? Utc(date) : "nieustalony";
-        string attempt = $"Próba: {Utc(origin.OpenedAt)}.";
+        string next = origin.NextCheck is { } date ? Utc(date) : "unknown";
+        string attempt = $"Attempt: {Utc(origin.OpenedAt)}.";
         if (origin.Status == RefreshStatus.Deferred && !origin.VersionCheckedBeforeDeferral && origin.LastCheck is { } previous)
         {
             string outcome = origin.Error switch
             {
-                { } e when e.StartsWith("HTTP 429.", StringComparison.Ordinal) => " — ograniczenie żądań (HTTP 429)",
-                { } e when e.StartsWith("endpoints[", StringComparison.Ordinal) => " — błąd walidacji danych",
+                { } e when e.StartsWith("HTTP 429.", StringComparison.Ordinal) => " — request throttling (HTTP 429)",
+                { } e when e.StartsWith("endpoints[", StringComparison.Ordinal) => " — data validation error",
                 _ => ""
             };
-            attempt = $"Poprzednia próba: {Utc(previous)}{outcome}.";
+            attempt = $"Previous attempt: {Utc(previous)}{outcome}.";
         }
-        return $"{status} Najwcześniejsza kolejna kontrola: {next}. {attempt}";
+        return $"{status} Earliest next check: {next}. {attempt}";
     }
 
     private static string? RefreshDetails(SourceInfo origin)
     {
         string? details = origin.Error;
         if (origin.Status == RefreshStatus.Deferred && !origin.VersionCheckedBeforeDeferral && origin.LastCheck is { } previous &&
-            details != null && !details.StartsWith("Odczyt cache:", StringComparison.Ordinal))
-            return $"Poprzednia próba ({Utc(previous)}): {details}";
+            details != null && !details.StartsWith("Cache read:", StringComparison.Ordinal) &&
+            // Compatibility with diagnostic text persisted by the older Polish UI.
+            !details.StartsWith("Odczyt cache:", StringComparison.Ordinal))
+            return $"Previous attempt ({Utc(previous)}): {details}";
         return details;
     }
 
@@ -230,12 +232,12 @@ public sealed class BrowserDocument
     private static string Age(TimeSpan age)
     {
         if (age < TimeSpan.Zero) age = TimeSpan.Zero;
-        return $"{age.Days} d {age.Hours} godz. {age.Minutes} min";
+        return $"{age.Days} d {age.Hours} h {age.Minutes} min";
     }
 
     private sealed class OfflineHandler : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
-            => throw new InvalidOperationException("Odczyt cache jest lokalny.");
+            => throw new InvalidOperationException("Cache reads are local.");
     }
 }

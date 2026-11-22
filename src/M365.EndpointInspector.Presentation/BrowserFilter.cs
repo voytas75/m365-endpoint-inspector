@@ -30,18 +30,18 @@ public sealed record BrowserFilter
         if (Ports.Trim().Length > 0)
         {
             if (Protocol == null)
-                errors.Add(new(FilterField.Protocol, "required", "Wybierz TCP lub UDP, aby zastosować filtr portów."));
-            Check(FilterField.Ports, "syntax", $"Popraw port lub zakres „{Ports}”: liczby 1–65535, np. 443, 5000-5004; początek nie większy niż koniec.",
+                errors.Add(new(FilterField.Protocol, "required", "Select TCP or UDP to apply a port filter."));
+            Check(FilterField.Ports, "syntax", $"Correct the port or range “{Ports}”: numbers 1–65535, e.g. 443, 5000-5004; start must not exceed end.",
                 () => PortRange.ParseList(Ports.Trim()));
         }
         if (Address.Trim().Length > 0)
-            Check(FilterField.Address, "syntax", "Podaj pełny IPv4 lub IPv6 albo CIDR z adresem sieci (bez bitów hosta), np. 192.0.2.32/27; prefiks IPv4: 0–32, IPv6: 0–128.",
+            Check(FilterField.Address, "syntax", "Enter a complete IPv4 or IPv6 address, or CIDR with a network address (no host bits), e.g. 192.0.2.32/27; IPv4 prefix: 0–32, IPv6: 0–128.",
                 () => IpPrefix.Parse(Address.Trim()));
         if (Domain.Trim().Length > 0 && document.Snapshot is { } snapshot)
         {
             if (!UsesPublishedPattern)
                 // EndpointQuery exposes the canonical Domain DNS validator.
-                Check(FilterField.Domain, "syntax", "Podaj nazwę DNS bez spacji i adresu URL, np. mail.example.test, albo pełny wzorzec z otwartych danych.",
+                Check(FilterField.Domain, "syntax", "Enter a DNS name without spaces or a URL, e.g. mail.example.test, or a complete pattern from the open data.",
                     () => EndpointQuery.Select(snapshot, new EndpointFilter { Domain = Domain.Trim() }));
             else
             {
@@ -49,19 +49,19 @@ public sealed record BrowserFilter
                 if (pattern.EndsWith('.')) pattern = pattern[..^1];
                 bool HasPattern(Endpoint entry) => entry.DnsPatterns.Contains(pattern, StringComparer.OrdinalIgnoreCase);
                 if (!snapshot.Entries.Values.Any(HasPattern) && reference?.Snapshot?.Entries.Values.Any(HasPattern) != true)
-                    errors.Add(new(FilterField.Domain, "published-pattern", "Wpisz pełny wzorzec dokładnie z otwartych danych albo konkretną nazwę DNS, np. mail.example.test."));
+                    errors.Add(new(FilterField.Domain, "published-pattern", "Enter the complete pattern exactly as in the open data, or a concrete DNS name, e.g. mail.example.test."));
             }
         }
         if (Pointer.Length > 0)
-            Check(FilterField.Pointer, "syntax", "Zacznij ścieżkę od /, np. /extra/routing/0/tag. Znak ~ zapisz jako ~0, a / wewnątrz nazwy jako ~1.",
+            Check(FilterField.Pointer, "syntax", "Start the path with /, e.g. /extra/routing/0/tag. Encode ~ as ~0 and / within a name as ~1.",
                 () => FieldMatch.Missing(Pointer));
         else if (!string.IsNullOrWhiteSpace(JsonValue))
-            errors.Add(new(FilterField.Pointer, "required", "Podaj ścieżkę JSON Pointer dla tej wartości, np. /extra/tag."));
+            errors.Add(new(FilterField.Pointer, "required", "Enter a JSON Pointer path for this value, e.g. /extra/tag."));
         if (!string.IsNullOrWhiteSpace(JsonValue))
-            Check(FilterField.JsonValue, "syntax", "Podaj poprawną wartość JSON: tekst w cudzysłowie, np. \"blue\", liczbę, true lub null. Puste pole oznacza brak właściwości.",
+            Check(FilterField.JsonValue, "syntax", "Enter a valid JSON value: quoted text, e.g. \"blue\", a number, true or null. An empty field means the property is missing.",
                 () => { using var value = JsonDocument.Parse(JsonValue); });
         if (Change != null && reference == null)
-            errors.Add(new(FilterField.Change, "reference-required", "Otwórz migawkę odniesienia Synthetic albo wybierz Wszystkie zmiany."));
+            errors.Add(new(FilterField.Change, "reference-required", "Open a Synthetic reference snapshot or select All changes."));
         return errors.AsReadOnly();
     }
 
@@ -70,7 +70,7 @@ public sealed record BrowserFilter
     internal EndpointFilter ToQuery()
     {
         if (Ports.Trim().Length > 0 && Protocol is null)
-            throw new FormatException("Wybierz TCP lub UDP dla zapytania o porty.");
+            throw new FormatException("Select TCP or UDP for a port query.");
         return new EndpointFilter
         {
             ServiceArea = Area, Category = Category, Required = Required, Protocol = Protocol,
@@ -86,7 +86,7 @@ public sealed record BrowserFilter
         if (Pointer.Length == 0)
         {
             if (!string.IsNullOrWhiteSpace(JsonValue))
-                throw new FormatException("Wskaż ścieżkę JSON Pointer dla tej wartości.");
+                throw new FormatException("Specify a JSON Pointer path for this value.");
             return [];
         }
         if (string.IsNullOrWhiteSpace(JsonValue)) return [FieldMatch.Missing(Pointer)];

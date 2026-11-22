@@ -43,16 +43,20 @@ public partial class MainWindow : Window
         DataContext = Build;
         HitsGrid.LayoutChanged += (_, _) => CaptureChanges();
         CommonGrid.LayoutChanged += (_, _) => CaptureChanges();
+        SourceFields.Expanded += (_, _) => CaptureChanges();
+        SourceFields.Collapsed += (_, _) => CaptureChanges();
+        Comparison.Expanded += (_, _) => CaptureChanges();
+        Comparison.Collapsed += (_, _) => CaptureChanges();
         var area = SystemParameters.WorkArea;
         MinWidth = Math.Min(MinWidth, area.Width);
         MinHeight = Math.Min(MinHeight, area.Height);
         Width = Math.Min(Width, area.Width);
         Height = Math.Min(Height, area.Height);
-        SetChoices(Area, Enum.GetValues<ServiceArea>(), "Wszystkie", areaChoice => areaChoice.ToString());
-        SetChoices(CategoryBox, Enum.GetValues<Category>(), "Wszystkie", category => category.ToString());
-        SetChoices(RequiredBox, new[] { true, false }, "Dowolny", value => value ? "Tak" : "Nie");
-        SetChoices(Protocol, Enum.GetValues<Transport>(), "Dowolny", value => value.ToString().ToUpperInvariant());
-        SetChoices(Change, Enum.GetValues<ChangeKind>(), "Wszystkie", value => BrowserRow.ChangeLabel(value));
+        SetChoices(Area, Enum.GetValues<ServiceArea>(), "All", areaChoice => areaChoice.ToString());
+        SetChoices(CategoryBox, Enum.GetValues<Category>(), "All", category => category.ToString());
+        SetChoices(RequiredBox, new[] { true, false }, "Any", value => value ? "Yes" : "No");
+        SetChoices(Protocol, Enum.GetValues<Transport>(), "Any", value => value.ToString().ToUpperInvariant());
+        SetChoices(Change, Enum.GetValues<ChangeKind>(), "All", value => BrowserRow.ChangeLabel(value));
         ShowView(view.Present());
         IsEnabled = false;
         Loaded += Restore;
@@ -91,7 +95,7 @@ public partial class MainWindow : Window
         SaveNotice.Text = loaded.Warning ?? "";
         if (view.Document.Snapshot != null)
         {
-            Activity.Text = "Odtworzono miejsce pracy z lokalnego zapisu.";
+            Activity.Text = "Workspace restored from local storage.";
             CancelAction.Visibility = Visibility.Collapsed;
             ActivityPanel.Visibility = Visibility.Visible;
         }
@@ -113,7 +117,8 @@ public partial class MainWindow : Window
     {
         if (!canSave || rendering || closing) return;
         view = view with { Draft = ReadFilter(), Window = Placement(),
-            HitsLayout = HitsGrid.CaptureLayout(), CommonLayout = CommonGrid.CaptureLayout() };
+            HitsLayout = HitsGrid.CaptureLayout(), CommonLayout = CommonGrid.CaptureLayout(),
+            SourceFieldsExpanded = SourceFields.IsExpanded, ComparisonExpanded = Comparison.IsExpanded };
         if (view == lastQueued) return;
         var captured = view;
         lastQueued = captured;
@@ -124,7 +129,7 @@ public partial class MainWindow : Window
         }
         catch (Exception ex) when (WorkspaceStore.IsDataError(ex))
         {
-            SaveNotice.Text = $"Nie udało się zapisać miejsca pracy. {ex.Message}";
+            SaveNotice.Text = $"Could not save the workspace. {ex.Message}";
         }
     }
 
@@ -173,15 +178,19 @@ public partial class MainWindow : Window
             Comparison.IsEnabled = view.Document.IsSynthetic;
             var baseline = view.Reference?.Snapshot;
             Change.IsEnabled = DetachReference.IsEnabled = baseline != null;
-            ReferenceInfo.Text = baseline == null ? "Brak odniesienia" : $"Synthetic · {baseline.Version}";
+            ReferenceInfo.Text = baseline == null ? "No reference" : $"Synthetic · {baseline.Version}";
             ComparisonCaption.Text = baseline == null ? "" :
-                $"Odniesienie Synthetic: {baseline.Version}   ·   Usunięte wpisy pochodzą z odniesienia.";
+                $"Synthetic reference: {baseline.Version}   ·   Removed entries come from the reference.";
             HitsGrid.ChangeColumn.Visibility = CommonGrid.ChangeColumn.Visibility =
                 baseline == null ? Visibility.Collapsed : Visibility.Visible;
             ResultsPanel.DataContext = display.Results;
             FilterProblem.Text = display.DraftError == null ? "" :
-                "⚠ Nie zastosowano filtra. Tabela zachowuje ostatni poprawny wynik. Popraw wskazane pola i wybierz Zastosuj.";
+                "⚠ Filter not applied. The table retains the last valid result. Correct the indicated fields and select Apply.";
+            SourceFields.IsExpanded = view.SourceFieldsExpanded;
+            Comparison.IsExpanded = view.ComparisonExpanded;
             ShowFilterErrors(display.FieldErrors);
+            // Validation may reveal a collapsed section; keep that actual state for later renders/saves.
+            view = view with { SourceFieldsExpanded = SourceFields.IsExpanded, ComparisonExpanded = Comparison.IsExpanded };
             if (display.DraftError != null && display.FieldErrors.Count == 0)
                 FilterProblem.Text += $" {display.DraftError}";
             HitsGrid.RestoreLayout(view.HitsLayout);
@@ -251,7 +260,7 @@ public partial class MainWindow : Window
 
     private string? PickFile(string title, bool csv = false)
     {
-        var picker = new OpenFileDialog { Title = title, Filter = csv ? "Pliki JSON/CSV (*.json;*.csv)|*.json;*.csv|Wszystkie pliki (*.*)|*.*" : "Pliki JSON (*.json)|*.json" };
+        var picker = new OpenFileDialog { Title = title, Filter = csv ? "JSON/CSV files (*.json;*.csv)|*.json;*.csv|All files (*.*)|*.*" : "JSON files (*.json)|*.json" };
         return picker.ShowDialog(this) == true ? picker.FileName : null;
     }
 
@@ -266,23 +275,23 @@ public partial class MainWindow : Window
                 ResultsPanel.DataContext is BrowserResults { ShowCommon: true }, ReadFilter());
             var picker = new SaveFileDialog
             {
-                Title = "Eksportuj ostatni zastosowany widok do CSV",
-                Filter = "Pliki CSV (*.csv)|*.csv", DefaultExt = ".csv", AddExtension = true,
+                Title = "Export the last applied view to CSV",
+                Filter = "CSV files (*.csv)|*.csv", DefaultExt = ".csv", AddExtension = true,
                 FileName = "wymagania.csv", OverwritePrompt = true
             };
             if (picker.ShowDialog(this) != true) return;
             var target = CsvExportFile.Inspect(picker.FileName);
             // Bind approval to content inspected after the system dialog, before any write.
             if (target.Exists && MessageBox.Show(this,
-                "Zastąpić istniejący plik przechwyconym widokiem? Zmiana pliku po tej zgodzie przerwie zapis.",
-                "Potwierdź zapis CSV", MessageBoxButton.YesNo, MessageBoxImage.Warning,
+                "Replace the existing file with the captured view? A file change after this approval will abort saving.",
+                "Confirm CSV save", MessageBoxButton.YesNo, MessageBoxImage.Warning,
                 MessageBoxResult.No) != MessageBoxResult.Yes) return;
             target.Save(export, overwriteApproved: target.Exists);
-            MessageBox.Show(this, export.Message, "Eksport CSV", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, export.Message, "CSV export", MessageBoxButton.OK, MessageBoxImage.Information);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException)
         {
-            MessageBox.Show(this, $"Nie wyeksportowano CSV. {ex.Message}", "Eksport CSV",
+            MessageBox.Show(this, $"CSV was not exported. {ex.Message}", "CSV export",
                 MessageBoxButton.OK, MessageBoxImage.Warning);
         }
     }
@@ -290,7 +299,7 @@ public partial class MainWindow : Window
     private async void Download_Click(object sender, RoutedEventArgs e)
     {
         var current = view;
-        await UpdateAsync("Sprawdzanie Worldwide…", async token =>
+        await UpdateAsync("Checking Worldwide…", async token =>
         {
             var feed = WorldwideFeed.CreateMicrosoft(AppFolder(Environment.SpecialFolder.CommonApplicationData, "Feed"), Clock, Build.Policy);
             return current.Open(await BrowserDocument.DownloadAsync(feed, Clock, token));
@@ -299,7 +308,7 @@ public partial class MainWindow : Window
 
     private async void OpenFile_Click(object sender, RoutedEventArgs e)
     {
-        if (PickFile("Otwórz plik JSON/CSV", csv: true) is { } path)
+        if (PickFile("Open JSON/CSV file", csv: true) is { } path)
             await OpenAsync(token => BrowserDocument.OpenFile(path, Clock, token));
     }
 
@@ -308,7 +317,7 @@ public partial class MainWindow : Window
 
     private async void OpenCache_Click(object sender, RoutedEventArgs e)
     {
-        var picker = new OpenFolderDialog { Title = "Wybierz lokalny folder MicrosoftWorldwide lub SimulatedWorldwide" };
+        var picker = new OpenFolderDialog { Title = "Select a local MicrosoftWorldwide or SimulatedWorldwide folder" };
         if (picker.ShowDialog(this) != true) return;
         string folder = picker.FolderName;
         await OpenAsync(token => BrowserDocument.OpenCache(folder, Clock, token));
@@ -317,21 +326,21 @@ public partial class MainWindow : Window
     private Task OpenAsync(Func<CancellationToken, BrowserDocument> read)
     {
         var current = view;
-        return UpdateAsync("Otwieranie danych…", token => Task.FromResult(current.Open(read(token))));
+        return UpdateAsync("Opening data…", token => Task.FromResult(current.Open(read(token))));
     }
 
     private async void OpenReference_Click(object sender, RoutedEventArgs e)
     {
-        if (PickFile("Otwórz syntetyczną migawkę odniesienia") is not { } path) return;
+        if (PickFile("Open a Synthetic reference snapshot") is not { } path) return;
         var current = view with { Draft = ReadFilter() };
-        await UpdateAsync("Otwieranie odniesienia Synthetic…", token => Task.FromResult(current with
+        await UpdateAsync("Opening Synthetic reference…", token => Task.FromResult(current with
             { Reference = BrowserDocument.OpenSynthetic(path, Clock, token) }), applyDraft: true);
     }
 
     private async void Detach_Click(object sender, RoutedEventArgs e)
     {
         var next = view with { Reference = null, Applied = view.Applied with { Change = null }, Draft = ReadFilter() with { Change = null } };
-        await UpdateAsync("Odłączanie odniesienia…", _ => Task.FromResult(next), applyDraft: true);
+        await UpdateAsync("Detaching reference…", _ => Task.FromResult(next), applyDraft: true);
     }
 
     private async void Apply_Click(object sender, RoutedEventArgs e) => await ApplyAsync(ReadFilter());
@@ -340,7 +349,7 @@ public partial class MainWindow : Window
     private Task ApplyAsync(BrowserFilter filter)
     {
         var next = view with { Draft = filter };
-        return UpdateAsync("Filtrowanie wpisów…", _ => Task.FromResult(next), applyDraft: true);
+        return UpdateAsync("Filtering entries…", _ => Task.FromResult(next), applyDraft: true);
     }
 
     private async Task UpdateAsync(string activity, Func<CancellationToken, Task<BrowserWorkspace>> prepare, bool applyDraft = false)
@@ -372,11 +381,11 @@ public partial class MainWindow : Window
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested)
         {
-            Activity.Text = "Anulowano operację. Zachowano poprzedni widok.";
+            Activity.Text = "Operation cancelled. Previous view preserved.";
         }
         catch (Exception ex) when (WorkspaceStore.IsDataError(ex))
         {
-            Activity.Text = $"{ex.Message} Zachowano poprzedni widok.";
+            Activity.Text = $"{ex.Message} Previous view preserved.";
             if (ex is InvalidDataException { InnerException: IOException detail })
             {
                 ActivityDetailText.Text = detail.Message;
@@ -398,7 +407,7 @@ public partial class MainWindow : Window
     {
         operation?.Cancel();
         CancelAction.IsEnabled = false;
-        Activity.Text = "Anulowanie operacji…";
+        Activity.Text = "Cancelling operation…";
     }
 
     protected override async void OnClosing(CancelEventArgs e)
@@ -418,8 +427,8 @@ public partial class MainWindow : Window
         try { await writer.FlushAsync(); }
         catch (Exception ex) when (WorkspaceStore.IsDataError(ex))
         {
-            SaveNotice.Text = $"Nie zapisano ostatnich zmian. {ex.Message}";
-            if (MessageBox.Show(this, $"{SaveNotice.Text}\nZamknąć okno mimo to?", "Zapis miejsca pracy",
+            SaveNotice.Text = $"Latest changes were not saved. {ex.Message}";
+            if (MessageBox.Show(this, $"{SaveNotice.Text}\nClose the window anyway?", "Workspace save",
                 MessageBoxButton.YesNo, MessageBoxImage.Warning, MessageBoxResult.No) != MessageBoxResult.Yes)
             {
                 closing = false;

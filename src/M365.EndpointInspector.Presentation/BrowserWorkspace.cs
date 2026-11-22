@@ -6,7 +6,7 @@ public sealed record WindowPlacement(double Left, double Top, double Width, doub
     {
         if (!double.IsFinite(Left) || !double.IsFinite(Top) ||
             !double.IsFinite(Width) || !double.IsFinite(Height) || Width <= 0 || Height <= 0)
-            throw new InvalidDataException("Niepoprawne wymiary okna.");
+            throw new InvalidDataException("Invalid window dimensions.");
     }
 
     public WindowPlacement Fit(double left, double top, double width, double height, double minWidth, double minHeight)
@@ -19,7 +19,8 @@ public sealed record WindowPlacement(double Left, double Top, double Width, doub
 
 public sealed record BrowserWorkspace(BrowserDocument Document, BrowserFilter Applied, BrowserFilter Draft,
     BrowserDocument? Reference = null, int? SelectedId = null, WindowPlacement? Window = null,
-    GridLayout? HitsLayout = null, GridLayout? CommonLayout = null)
+    GridLayout? HitsLayout = null, GridLayout? CommonLayout = null,
+    bool SourceFieldsExpanded = false, bool ComparisonExpanded = false)
 {
     public static BrowserWorkspace Empty { get; } = new(BrowserDocument.Empty, new(), new());
 
@@ -27,7 +28,8 @@ public sealed record BrowserWorkspace(BrowserDocument Document, BrowserFilter Ap
     {
         if (source.Snapshot == null)
             throw new InvalidDataException($"{source.SourceLabel}. {source.Notice}", BrowserDocument.Diagnostic(source.Details));
-        return new(source, new(), new(), Window: Window, HitsLayout: HitsLayout, CommonLayout: CommonLayout);
+        return new(source, new(), new(), Window: Window, HitsLayout: HitsLayout, CommonLayout: CommonLayout,
+            SourceFieldsExpanded: SourceFieldsExpanded, ComparisonExpanded: ComparisonExpanded);
     }
 
     public WorkspaceView Present(bool applyDraft = false, bool keepEmptySelection = false)
