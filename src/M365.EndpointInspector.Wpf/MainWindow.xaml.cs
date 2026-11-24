@@ -258,6 +258,15 @@ public partial class MainWindow : Window
         if (Targets.SelectedItem is TargetChoice target) await ApplyAsync(target.AllMemberships());
     }
 
+    private void Reachability_Click(object sender, RoutedEventArgs e)
+    {
+        if (operation != null || closing) return;
+        var targets = ReachabilityBatch.SelectedValues(HitsGrid.SelectedItems.Cast<BrowserRow>(),
+            CommonGrid.SelectedItems.Cast<BrowserRow>());
+        new ReachabilityWindow((Targets.SelectedItem as TargetChoice)?.Value, targets,
+            view.Document.Snapshot, Selected<ServiceArea>(Area)) { Owner = this }.ShowDialog();
+    }
+
     private string? PickFile(string title, bool csv = false)
     {
         var picker = new OpenFileDialog { Title = title, Filter = csv ? "JSON/CSV files (*.json;*.csv)|*.json;*.csv|All files (*.*)|*.*" : "JSON files (*.json)|*.json" };

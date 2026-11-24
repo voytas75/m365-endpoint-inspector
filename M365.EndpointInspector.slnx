@@ -5,4 +5,5 @@
   <Project Path="tests/M365.EndpointInspector.Feed.Tests/M365.EndpointInspector.Feed.Tests.csproj" />
   <Project Path="tests/M365.EndpointInspector.Presentation.Tests/M365.EndpointInspector.Presentation.Tests.csproj" />
   <Project Path="tests/M365.EndpointInspector.Tests/M365.EndpointInspector.Tests.csproj" />
+  <Project Path="tests/M365.EndpointInspector.Reachability.Tests/M365.EndpointInspector.Reachability.Tests.csproj" />
 </Solution>

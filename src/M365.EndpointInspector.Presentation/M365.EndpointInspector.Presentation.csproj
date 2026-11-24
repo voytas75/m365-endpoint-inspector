@@ -5,6 +5,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="M365.EndpointInspector.Reachability.Tests" />
     <Compile Include="../Shared/*.cs" Link="Storage/%(Filename)%(Extension)" />
     <ProjectReference Include="../M365.EndpointInspector.Feed/M365.EndpointInspector.Feed.csproj" />
   </ItemGroup>

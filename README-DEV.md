@@ -14,9 +14,12 @@ Run the offline console harnesses from the repository root (Windows or Linux/WSL
 dotnet run --project tests/M365.EndpointInspector.Tests
 dotnet run --project tests/M365.EndpointInspector.Feed.Tests
 dotnet run --project tests/M365.EndpointInspector.Presentation.Tests
+dotnet run --project tests/M365.EndpointInspector.Reachability.Tests
 ```
 
 Use `--no-restore` if assets have already been restored. The Feed harness includes a filesystem test that requires permission to create symbolic links; a permission failure does not prove a cache defect. The portable harnesses do not replace testing the GUI on Windows.
+
+The reachability harness uses synthetic data and controlled transports; see [the reachability plan](docs/reachability-plan.md) for Windows acceptance status.
 
 ## Project structure
 
