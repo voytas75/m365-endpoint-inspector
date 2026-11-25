@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +16,20 @@ namespace M365.EndpointInspector.Wpf;
 
 public partial class ReachabilityWindow : Window
 {
+    private void OpenMicrosoftTest_Click(object sender, RoutedEventArgs e)
+    {
+        const string url = "https://connectivity.m365.cloud.microsoft/";
+        try
+        {
+            using var browser = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            MessageBox.Show(this, $"Could not open the default browser. Open {url} manually.",
+                "Microsoft 365 connectivity test", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private readonly ObservableCollection<ProbeResult> rows = new();
     private readonly ReachabilityProbe probe = new();
     private readonly EndpointSnapshot? snapshot;

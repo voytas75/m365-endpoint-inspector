@@ -6,6 +6,8 @@
         <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
             <WrapPanel Margin="0,0,0,6">
                 <Button x:Name="CancelButton" Content="_Cancel checks" Click="Cancel_Click" IsEnabled="False"/>
+                <Button Content="Open Microsoft 365 connectivity _test" Click="OpenMicrosoftTest_Click" Margin="6,0,0,0"
+                        ToolTip="Opens the official Microsoft test in your default browser. No targets or results are passed."/>
             </WrapPanel>
             <TextBlock TextWrapping="Wrap" Text="Checks local DNS, direct TCP on the target port (443 unless specified in the HTTPS URL), and HTTPS HEAD using the system proxy policy (which may bypass the proxy). These checks do not verify application health."/>
             <TextBlock x:Name="Status" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
