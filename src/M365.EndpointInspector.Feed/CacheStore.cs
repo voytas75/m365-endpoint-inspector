@@ -12,6 +12,8 @@ public enum CacheGeneration { Unavailable, Active, Previous }
 public sealed record CacheView(CacheGeneration Generation, EndpointSnapshot? Snapshot,
     TimeSpan? Age, string? Error)
 {
+    public bool GenerationsMissing { get; internal init; }
+
     internal CacheView At(DateTimeOffset now)
     {
         if (Snapshot?.Observation is not { } observation)
@@ -63,6 +65,7 @@ internal sealed class CacheStore
     };
 
     private readonly string directory;
+    internal string DirectoryPath => directory;
     private readonly WorldwideSource source;
     private readonly TimeProvider clock;
 
@@ -210,6 +213,7 @@ internal sealed class CacheStore
     internal CacheView Read(bool previousOnly = false)
     {
         var errors = new List<string>();
+        bool missing = !previousOnly;
         foreach (string name in previousOnly ? new[] { "previous" } : new[] { "active", "previous" })
         {
             try
@@ -221,10 +225,11 @@ internal sealed class CacheStore
             }
             catch (Exception ex) when (IsStorageOrDataError(ex))
             {
+                missing &= ex is FileNotFoundException or DirectoryNotFoundException;
                 errors.Add($"{name}: {ex.Message}");
             }
         }
-        return new(CacheGeneration.Unavailable, null, null, string.Join(" ", errors));
+        return new(CacheGeneration.Unavailable, null, null, string.Join(" ", errors)) { GenerationsMissing = missing };
     }
 
     internal CacheView Publish(EndpointSnapshot snapshot, CacheView before, CancellationToken token)

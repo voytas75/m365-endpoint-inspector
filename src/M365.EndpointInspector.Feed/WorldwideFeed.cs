@@ -61,7 +61,18 @@ public sealed class WorldwideFeed
     }
 
     public CacheView ReadCache(bool previousOnly = false) => store.Read(previousOnly);
+    public string CacheDirectory => store.DirectoryPath;
 
+    /// <summary>
+    /// Checks the published Worldwide feed version and updates the local cache when needed.
+    /// </summary>
+    /// <param name="cancellationToken">Cancels the lock wait or an in-progress refresh.</param>
+    /// <returns>
+    /// The refresh status and cache view. A check may be deferred by the refresh schedule or a server deadline.
+    /// HTTP 429 and request timeout are reported as <see cref="RefreshStatus.Throttled"/> and
+    /// <see cref="RefreshStatus.TimedOut"/>, respectively.
+    /// </returns>
+    /// <exception cref="OperationCanceledException">The caller's cancellation was observed.</exception>
     public async Task<RefreshResult> RefreshAsync(CancellationToken cancellationToken = default)
     {
         try

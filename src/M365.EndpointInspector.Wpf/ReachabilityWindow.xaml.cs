@@ -86,7 +86,15 @@ public partial class ReachabilityWindow : Window
         Results.ItemsSource = rows;
         CollectionViewSource.GetDefaultView(rows).SortDescriptions.Add(
             new(nameof(ProbeResult.OutcomePriority), System.ComponentModel.ListSortDirection.Ascending));
-        HostBox.TextChanged += (_, _) => UpdateControls();
+        HostBox.TextChanged += (_, _) =>
+        {
+            if (TargetWarning.Visibility == Visibility.Visible)
+            {
+                TargetWarning.Visibility = Visibility.Collapsed;
+                Status.Text = "";
+            }
+            UpdateControls();
+        };
         UpdateControls();
         RenderProgress();
     }
@@ -111,7 +119,8 @@ public partial class ReachabilityWindow : Window
         var batch = ReachabilityBatch.FromValues([HostBox.Text]);
         if (batch.Targets.Count == 0)
         {
-            Status.Text = "Enter a concrete host, IP address or HTTPS URL without credentials, query or fragment.";
+            TargetWarning.Visibility = Visibility.Visible;
+            Status.Text = "Invalid target. Use a host, IP address, or full HTTPS URL.";
             return;
         }
         await RunAsync(batch);
@@ -170,6 +179,7 @@ public partial class ReachabilityWindow : Window
 
     private async Task RunAsync(ReachabilityBatch batch, bool retry = false)
     {
+        TargetWarning.Visibility = Visibility.Collapsed;
         if (active != null) return;
         var count = batch.Summary;
         if (batch.Targets.Count == 0)

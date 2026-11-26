@@ -94,6 +94,7 @@
                     <Button Content="_Export CSV…" Click="ExportCsv_Click" Margin="8,0,0,0"/>
                     <Menu VerticalAlignment="Center" Margin="12,0,0,0">
                         <MenuItem Header="_More">
+                            <MenuItem Header="Local data…" Click="LocalData_Click"/>
                             <MenuItem Header="Synthetic example (Synthetic)" Click="OpenDemo_Click"/>
                             <MenuItem Header="Open local cache…" Click="OpenCache_Click"/>
                         </MenuItem>

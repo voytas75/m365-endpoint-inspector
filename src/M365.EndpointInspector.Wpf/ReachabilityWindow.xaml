@@ -11,6 +11,11 @@
             </WrapPanel>
             <TextBlock TextWrapping="Wrap" Text="Checks local DNS, direct TCP on the target port (443 unless specified in the HTTPS URL), and HTTPS HEAD using the system proxy policy (which may bypass the proxy). These checks do not verify application health."/>
             <TextBlock x:Name="Status" Margin="0,6,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"/>
+            <Border x:Name="TargetWarning" Visibility="Collapsed" Margin="0,6,0,0" Padding="8,5"
+                    BorderThickness="2" BorderBrush="{DynamicResource {x:Static SystemColors.WindowTextBrushKey}}">
+                <TextBlock TextWrapping="Wrap" FontWeight="SemiBold"
+                           Text="Invalid target. Enter a host or IP without a port. To specify a port, use a full HTTPS URL, for example https://localhost:443/. Do not include credentials, a query or a fragment."/>
+            </Border>
         </StackPanel>
         <Grid>
             <Grid.RowDefinitions>

@@ -2,6 +2,10 @@ namespace M365.EndpointInspector.Presentation;
 
 public sealed record WindowPlacement(double Left, double Top, double Width, double Height, bool Maximized)
 {
+    // Older builds saved optional monitor metadata. Accept it without using it for placement.
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
+    public System.Text.Json.JsonElement? Monitor { get => null; init { } }
+
     internal void Validate()
     {
         if (!double.IsFinite(Left) || !double.IsFinite(Top) ||

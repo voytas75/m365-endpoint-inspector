@@ -54,7 +54,11 @@ internal static class Program
             }
             await CacheStates(root);
             Console.WriteLine("PASS simulated active, fallback, age, errors and source isolation");
-            int passed = groups.Length + 1 + await WorkspaceCases.Run(root);
+            await Bootstrap(root);
+            Console.WriteLine("PASS first-run Worldwide bootstrap and no-download guards");
+            await BootstrapFailures(root);
+            Console.WriteLine("PASS bootstrap failure, deferral, in-flight cancellation and manual recovery");
+            int passed = groups.Length + 3 + await WorkspaceCases.Run(root);
             Console.WriteLine($"{passed}/{passed} offline presentation groups passed.");
             Console.WriteLine($"Simulated cache fixtures: {root}");
             return 0;
@@ -70,7 +74,8 @@ internal static class Program
     {
         var assembly = typeof(BuildInfo).Assembly;
         var info = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()!.InformationalVersion.Split('+');
-        Check.Equal("0.3.4-dev", info[0]);
+        var props = XDocument.Load(Path.Combine(root, "src/Directory.Build.props"));
+        Check.Equal(props.Descendants("Version").Single().Value, info[0]);
         Check.True(info[1].Length == 64 && info[1].All(char.IsAsciiHexDigit));
 #if DEBUG
         var build = new BuildInfo(assembly, true);
@@ -172,7 +177,7 @@ internal static class Program
         Check.Equal("*.mail.example.test, shared.example.test", row.Domains);
         Check.True(row.Addresses.Contains("2001:db8:1::20/123"));
         AssertReadablePreview(document.Snapshot!.Entries[101].Source, row.RawJson);
-        Check.True(row.RawJson.Contains("\n    \"*.mail.example.test\",\n    \"shared.example.test\""));
+        Check.True(row.RawJson.ReplaceLineEndings("\n").Contains("\n    \"*.mail.example.test\",\n    \"shared.example.test\"", StringComparison.Ordinal));
         using var json = JsonDocument.Parse(row.RawJson);
         Check.Equal(2, json.RootElement.GetProperty("extra").GetProperty("routing")[0].GetProperty("weight").GetInt32());
         Check.Equal("—", exchange.Common.First().ExpressRoute);
@@ -225,7 +230,7 @@ internal static class Program
         string original = source.GetRawText();
         using var formatted = JsonDocument.Parse(preview);
         Check.True(JsonElement.DeepEquals(source, formatted.RootElement));
-        Check.True(preview.StartsWith("{\n  \""));
+        Check.True(preview.ReplaceLineEndings("\n").StartsWith("{\n  \"", StringComparison.Ordinal));
         Check.True(preview.Split('\n').Length > source.EnumerateObject().Count());
         Check.Equal(original, source.GetRawText());
         Check.Equal(preview, JsonSerializer.Serialize(source, new JsonSerializerOptions { WriteIndented = true }));
@@ -244,6 +249,91 @@ internal static class Program
         AssertReadablePreview(baseline.Snapshot!.Entries[105].Source, removed.RawJson);
         Check.True(BrowserResults.Select(document, new() { Change = ChangeKind.Removed }).FilterError != null);
         Check.True(BrowserResults.Select(document, new(), BrowserDocument.Empty).FilterError != null);
+    }
+
+    private static async Task Bootstrap(string root)
+    {
+        using var fixture = new Fixture(Path.Combine(root, "bootstrap"));
+        var empty = BrowserWorkspace.Empty;
+        var loaded = new WorkspaceLoad(empty, null, true);
+        Task<BrowserWorkspace> Start(WorkspaceLoad state, BrowserWorkspace current, CancellationToken token = default) =>
+            BrowserDocument.BootstrapAsync(state, current, fixture.Feed, fixture.Clock, token);
+        Check.True(fixture.Feed.ReadCache().GenerationsMissing);
+        Check.True(ReferenceEquals(empty, await Start(loaded with { CanSave = false }, empty)));
+        var imported = empty.Open(Open("synthetic-1"));
+        Check.True(ReferenceEquals(imported, await Start(loaded, imported)));
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        try { await Start(loaded, empty, cancelled.Token); throw new InvalidOperationException("Expected cancellation."); }
+        catch (OperationCanceledException) when (cancelled.IsCancellationRequested) { }
+        fixture.Transport.Pair(SimulatedTransport.First);
+        var downloaded = await Start(loaded, empty);
+        Check.True(downloaded.Document.Snapshot != null);
+        Check.True(File.Exists(Path.Combine(fixture.DirectoryPath, "active.json")));
+        string active = Path.Combine(fixture.DirectoryPath, "active.json");
+        var original = File.ReadAllBytes(active);
+        fixture.Clock.Advance(TimeSpan.FromDays(2));
+        var cached = await Start(loaded, empty);
+        Check.True(cached.Document.SourceLabel.Contains("active copy") && cached.Document.Metadata.Contains("2 d 0 h"));
+        Check.True(original.SequenceEqual(File.ReadAllBytes(active)));
+        var store = new WorkspaceStore(Path.Combine(root, "bootstrap-workspace"), fixture.Clock);
+        store.Load();
+        store.Save(cached);
+        Check.True(store.Load().Workspace.Document.SourceLabel.Contains("active copy"));
+        string previous = Path.Combine(fixture.DirectoryPath, "previous.json");
+        File.Copy(active, previous);
+        File.WriteAllText(active, "{");
+        Check.True((await Start(loaded, empty)).Document.SourceLabel.Contains("previous copy"));
+        File.Delete(previous);
+        Check.True(!fixture.Feed.ReadCache().GenerationsMissing);
+        Check.True(ReferenceEquals(empty, await Start(loaded, empty)));
+        Check.Equal("{", File.ReadAllText(active));
+        Check.Equal(2, fixture.Transport.Ids.Count);
+        fixture.Transport.Drained();
+    }
+
+    private static async Task BootstrapFailures(string root)
+    {
+        using var fixture = new Fixture(Path.Combine(root, "bootstrap-failures"));
+        var empty = BrowserWorkspace.Empty;
+        var loaded = new WorkspaceLoad(empty, null, true);
+        Task<BrowserWorkspace> Start(CancellationToken token = default) =>
+            BrowserDocument.BootstrapAsync(loaded, empty, fixture.Feed, fixture.Clock, token);
+
+        async Task ExpectFailure()
+        {
+            try { await Start(); throw new InvalidOperationException("Expected an unavailable snapshot."); }
+            catch (InvalidDataException ex) { Check.True(ex.Message.Contains("No valid Worldwide cache copy.")); }
+            Check.True(fixture.Feed.ReadCache().GenerationsMissing);
+        }
+
+        fixture.Transport.Reply("version", SimulatedTransport.Json("{}", System.Net.HttpStatusCode.ServiceUnavailable));
+        await ExpectFailure();
+        await ExpectFailure(); // Persisted schedule defers the second call without transport.
+        Check.Equal(1, fixture.Transport.Ids.Count);
+
+        fixture.Clock.Advance(TimeSpan.FromDays(7));
+        var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        fixture.Transport.Queue("version", async token =>
+        {
+            entered.SetResult();
+            await Task.Delay(Timeout.InfiniteTimeSpan, token);
+            throw new InvalidOperationException("Expected transport cancellation.");
+        });
+        using var cancellation = new CancellationTokenSource();
+        var attempt = Start(cancellation.Token);
+        await entered.Task.WaitAsync(TimeSpan.FromSeconds(5));
+        cancellation.Cancel();
+        try { await attempt.WaitAsync(TimeSpan.FromSeconds(5)); throw new InvalidOperationException("Expected cancellation."); }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
+        Check.True(fixture.Feed.ReadCache().GenerationsMissing);
+
+        fixture.Clock.Advance(TimeSpan.FromDays(7));
+        fixture.Transport.Pair();
+        var manual = await BrowserDocument.DownloadAsync(fixture.Feed, fixture.Clock, Token);
+        Check.True(manual.Snapshot != null);
+        Check.Equal(4, fixture.Transport.Ids.Count);
+        fixture.Transport.Drained();
     }
 
     private static async Task CacheStates(string root)

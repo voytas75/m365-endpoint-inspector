@@ -103,6 +103,12 @@ public partial class MainWindow : Window
         view = view with { Window = Placement() };
         lastQueued = view;
         canSave = loaded.CanSave;
+        if (canSave && view.Document.Snapshot == null)
+        {
+            var current = view;
+            await UpdateAsync("Checking for first-run Worldwide data…", token =>
+                BrowserDocument.BootstrapAsync(loaded, current, CreateFeed(), Clock, token));
+        }
     }
 
     private WindowPlacement? Placement()
@@ -305,13 +311,27 @@ public partial class MainWindow : Window
         }
     }
 
+    private static WorldwideFeed CreateFeed() => WorldwideFeed.CreateMicrosoft(
+        AppFolder(Environment.SpecialFolder.CommonApplicationData, "Feed"), Clock, Build.Policy);
+
+    private async void LocalData_Click(object sender, RoutedEventArgs e)
+    {
+        if (closing) return;
+        var feed = CreateFeed();
+        string workspace = AppFolder(Environment.SpecialFolder.LocalApplicationData, "Workspace");
+        var cache = await Task.Run(feedRead);
+        if (closing) return;
+        new LocalDataWindow(Build.Label, canSave, workspace, feed.CacheDirectory, cache) { Owner = this }.ShowDialog();
+
+        CacheView feedRead() => feed.ReadCache();
+    }
+
     private async void Download_Click(object sender, RoutedEventArgs e)
     {
         var current = view;
         await UpdateAsync("Checking Worldwide…", async token =>
         {
-            var feed = WorldwideFeed.CreateMicrosoft(AppFolder(Environment.SpecialFolder.CommonApplicationData, "Feed"), Clock, Build.Policy);
-            return current.Open(await BrowserDocument.DownloadAsync(feed, Clock, token));
+            return current.Open(await BrowserDocument.DownloadAsync(CreateFeed(), Clock, token));
         });
     }
 

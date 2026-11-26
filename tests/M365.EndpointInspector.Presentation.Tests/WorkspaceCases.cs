@@ -303,6 +303,17 @@ internal static class WorkspaceCases
         var queued = writer.ScheduleAsync(invalid.Workspace);
         await writer.FlushAsync();
         await queued;
+        string active = Path.Combine(root, "state", "workspace.json");
+        using var envelope = JsonDocument.Parse(File.ReadAllText(active));
+        var payload = envelope.RootElement.GetProperty("Workspace");
+        string window = payload.GetProperty("Window").GetRawText();
+        string legacy = payload.GetRawText().Replace(window, window.Insert(1, "\"Monitor\":{\"DpiX\":144},"), StringComparison.Ordinal);
+        string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(legacy)));
+        File.WriteAllText(active, $$"""{"Format":1,"Sha256":"{{hash}}","Workspace":{{legacy}}}""");
+        var reopened = Store(root, clock);
+        var loaded = reopened.Load();
+        if (!loaded.CanSave) throw new InvalidOperationException(loaded.Warning);
+        reopened.Save(loaded.Workspace);
         var restored = Store(root, clock).Load().Workspace.Present();
         Check.Equal(invalid.DraftError, restored.DraftError);
         Check.Equal(string.Join("|", invalid.FieldErrors), string.Join("|", restored.FieldErrors));

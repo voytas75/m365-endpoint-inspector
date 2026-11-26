@@ -21,6 +21,10 @@ You can review a saved list without downloading a new one. A match tells you wha
 
 ## Building and running
 
+To try the Windows x64 release candidate, extract the entire ZIP to a writable folder and run `M365.EndpointInspector.Wpf.exe`. The package includes the .NET runtime; no SDK or separate .NET installation is needed. Workspace data is stored in the Windows user profile, not beside the executable.
+
+**Reachability** runs DNS, direct TCP and HTTPS checks on request. An HTTP response does not prove service health. Successful HTTPS tunneling through a Windows system proxy has not been verified. **Open Microsoft 365 connectivity test** opens the official site in the default browser without passing targets or results.
+
 On Windows, with the .NET SDK specified in `global.json`, run these commands from the repository directory:
 
 ```powershell

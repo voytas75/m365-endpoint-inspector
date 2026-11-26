@@ -8,6 +8,8 @@ Use the exact .NET SDK specified in [global.json](global.json). `M365.EndpointIn
 dotnet build src/M365.EndpointInspector.Wpf -c Debug
 ```
 
+To prepare a portable release on Windows, publish to a new directory with `dotnet publish src/M365.EndpointInspector.Wpf -c Release -r win-x64 --self-contained true -o <publish-directory>`. Include `LICENSE`, the user instructions and the logo referenced by the README. ZIP the directory contents, then record the source revision and ZIP SHA-256. Verify the extracted executable on Windows x64 before distribution.
+
 Run the offline console harnesses from the repository root (Windows or Linux/WSL):
 
 ```text

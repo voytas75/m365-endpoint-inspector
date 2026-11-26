@@ -87,6 +87,20 @@ public sealed class BrowserDocument
         return Describe(snapshot, new(kind, now, fullPath, Csv: csv), now);
     }
 
+    public static async Task<BrowserWorkspace> BootstrapAsync(WorkspaceLoad loaded, BrowserWorkspace current,
+        WorldwideFeed feed, TimeProvider clock, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (!loaded.CanSave || current.Document.Snapshot != null)
+            return current;
+        var cache = feed.ReadCache();
+        token.ThrowIfCancellationRequested();
+        if (cache.Snapshot is { } snapshot)
+            return current.Open(DescribeCache(snapshot, cache, feed.CacheDirectory, clock.GetUtcNow()));
+        if (!cache.GenerationsMissing) return current;
+        return current.Open(await DownloadAsync(feed, clock, token).ConfigureAwait(false));
+    }
+
     public static async Task<BrowserDocument> DownloadAsync(WorldwideFeed feed, TimeProvider clock, CancellationToken token)
     {
         var result = await feed.RefreshAsync(token).ConfigureAwait(false);
@@ -120,9 +134,11 @@ public sealed class BrowserDocument
         if (cache.Snapshot is not { } snapshot)
             return new(null, null, $"{TransportLabel(source)} · no valid cache copy", "No data to display.",
                 "Could not read the local snapshot.", cache.Error);
-        var now = clock.GetUtcNow();
-        return Describe(snapshot, new(BrowserSource.Cache, now, directory.FullName, cache.Generation, Error: cache.Error), now);
+        return DescribeCache(snapshot, cache, directory.FullName, clock.GetUtcNow());
     }
+
+    private static BrowserDocument DescribeCache(EndpointSnapshot snapshot, CacheView cache, string path, DateTimeOffset now) =>
+        Describe(snapshot, new(BrowserSource.Cache, now, path, cache.Generation, Error: cache.Error), now);
 
     internal SavedDocument? Pack() => Snapshot == null ? null : new(Origin!, Snapshot.Observation, Snapshot.Source);
 
