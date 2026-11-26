@@ -23,6 +23,21 @@ Use `--no-restore` if assets have already been restored. The Feed harness includ
 
 The reachability harness uses synthetic data and controlled transports; see [the reachability plan](docs/reachability-plan.md) for Windows acceptance status.
 
+## Regression Gate (GitHub Actions)
+
+[Regression Gate](.github/workflows/regression.yml) runs on pushes and pull requests targeting `main`. It uses the SDK in `global.json` and reports the tested `GITHUB_SHA` (the merge-result SHA for pull requests).
+
+- Ubuntu builds the portable solution in Release and runs Domain, Feed, Presentation and Reachability as separate console harnesses. They use synthetic inputs, simulated Worldwide transport and local loopback, not production Microsoft 365 endpoints or a user workspace. SDK setup and restore are separate from application traffic.
+- Feed and Presentation require file and directory symlinks. If the runner cannot create them, those suites and link coverage are `BLOCKED`; the gate fails. A link capability probe alone is insufficient: both harnesses must report their link groups as passed. Checks that did not start are `NOT RUN`, never `PASS`.
+- Windows restores and builds the WPF project separately in Release with warnings treated as errors. CI does not accept the GUI, qualify the final ZIP, publish assets, deploy, or change branch protection.
+
+## Released baseline and regression notes
+
+- The stable Windows x64 ZIP is published in [v1.0.0](https://github.com/voytas75/m365-endpoint-inspector/releases/tag/v1.0.0). Its source is tag `v1.0.0` (`c23bf50`), not the `main` tip used before release (`2147812`). Start release reproduction from the tag, not from a working tree with pending changes. The published ZIP SHA-256 is `5c8c487a9e01e3ffc92f1043545689a02ec12bcb986c46277f91796f3432f959`. This identifies the accepted archive; it does not imply byte-for-byte reproducible builds. Record Windows acceptance against the final ZIP hash; a rebuilt archive does not inherit candidate acceptance.
+- Run Windows acceptance from a local Windows volume, as a standard user. A symlink fixture failure before the assertions does not establish a product defect or a pass. Qualify that fixture separately in an environment where file and directory links can be created; do not elevate the application. For JSON preview layout assertions, normalize CRLF/LF in the assertion, not in the application or the exported data.
+- The workspace is per user (`%LOCALAPPDATA%`); the Worldwide cache is machine-scoped (`%ProgramData%`). Changing users alone does not provide a cold-cache test. The startup order is restored workspace, usable Worldwide cache, then one initial refresh attempt if there is no restored snapshot and saving is allowed. Unreadable workspace state must not be treated as a clean start. Format 1 accepts the legacy `Window.Monitor` field without using or rewriting it; other unknown fields are still rejected.
+- Reachability is user initiated. Keep normal TLS validation and distinguish direct TCP from HTTPS using system proxy policy. Loopback and controlled transport tests do not qualify a successful Windows system proxy tunnel. The official Microsoft connectivity test is a browser link, not report integration.
+
 ## Project structure
 
 - `Domain`: snapshot models, imports, and filters.
