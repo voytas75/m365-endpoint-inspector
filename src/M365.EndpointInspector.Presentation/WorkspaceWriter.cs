@@ -8,8 +8,12 @@ public sealed class WorkspaceWriter(WorkspaceStore store, TimeSpan debounce)
     private readonly object gate = new();
     private CancellationTokenSource? delay;
     private BrowserWorkspace? pending;
+    // Only accessed while holding writes; reference identity distinguishes requests.
+    private BrowserWorkspace? committed;
 
-    public async Task<bool> ScheduleAsync(BrowserWorkspace workspace)
+    // Returns the snapshot actually written, or the requested snapshot if another
+    // operation already committed it. A cancelled or superseded wait returns null.
+    public async Task<BrowserWorkspace?> ScheduleAsync(BrowserWorkspace workspace)
     {
         using var wait = new CancellationTokenSource();
         lock (gate)
@@ -21,9 +25,9 @@ public sealed class WorkspaceWriter(WorkspaceStore store, TimeSpan debounce)
         try
         {
             await Task.Delay(debounce, wait.Token).ConfigureAwait(false);
-            return await WritePendingAsync().ConfigureAwait(false);
+            return await WritePendingAsync(workspace).ConfigureAwait(false);
         }
-        catch (OperationCanceledException) when (wait.IsCancellationRequested) { return false; }
+        catch (OperationCanceledException) when (wait.IsCancellationRequested) { return null; }
         finally
         {
             lock (gate)
@@ -37,18 +41,19 @@ public sealed class WorkspaceWriter(WorkspaceStore store, TimeSpan debounce)
         return WritePendingAsync();
     }
 
-    private async Task<bool> WritePendingAsync()
+    private async Task<BrowserWorkspace?> WritePendingAsync(BrowserWorkspace? requested = null)
     {
         await writes.WaitAsync().ConfigureAwait(false);
         try
         {
             BrowserWorkspace? captured;
             lock (gate) captured = pending;
-            if (captured == null) return false;
+            if (captured == null) return ReferenceEquals(requested, committed) ? committed : null;
             await Task.Run(() => store.Save(captured)).ConfigureAwait(false);
+            committed = captured;
             lock (gate)
                 if (ReferenceEquals(pending, captured)) pending = null;
-            return true;
+            return captured;
         }
         finally { writes.Release(); }
     }
