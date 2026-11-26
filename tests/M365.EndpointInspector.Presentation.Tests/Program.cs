@@ -22,8 +22,11 @@ internal static class Program
     private static BrowserDocument Open(string name) => BrowserDocument.OpenSynthetic(
         Path.Combine(AppContext.BaseDirectory, "Fixtures", name + ".json"), Clock, Token);
 
-    private static async Task<int> Main()
+    private static async Task<int> Main(string[] args)
     {
+        if (args is ["--workspace-contract"])
+            return await WorkspaceContractCases.Run();
+
         var repo = new DirectoryInfo(AppContext.BaseDirectory);
         while (repo != null && !File.Exists(Path.Combine(repo.FullName, "M365.EndpointInspector.slnx")))
             repo = repo.Parent;

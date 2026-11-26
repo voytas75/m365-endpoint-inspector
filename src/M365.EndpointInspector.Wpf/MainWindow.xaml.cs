@@ -130,7 +130,8 @@ public partial class MainWindow : Window
         lastQueued = captured;
         try
         {
-            if (await writer.ScheduleAsync(captured) && lastQueued == captured)
+            var saved = await writer.ScheduleAsync(captured);
+            if (saved != null && ReferenceEquals(lastQueued, saved))
                 SaveNotice.Text = "";
         }
         catch (Exception ex) when (WorkspaceStore.IsDataError(ex))
