@@ -1,0 +1,160 @@
+name: Regression Gate
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    name: Portable Regression
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      build: ${{ steps.build.outputs.status }}
+      domain: ${{ steps.tests.outputs.domain }}
+      feed: ${{ steps.tests.outputs.feed }}
+      presentation: ${{ steps.tests.outputs.presentation }}
+      reachability: ${{ steps.tests.outputs.reachability }}
+      links: ${{ steps.tests.outputs.links }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Build portable solution (Release)
+        id: build
+        run: |
+          if dotnet --version && dotnet build M365.EndpointInspector.slnx -c Release; then
+            echo 'status=PASS' >> "$GITHUB_OUTPUT"
+          else
+            echo 'status=FAIL' >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+      - name: Run offline harnesses and verify link coverage
+        id: tests
+        shell: bash
+        run: |
+          probe=$(mktemp -d "$RUNNER_TEMP/link-probe.XXXXXX")
+          mkdir "$probe/directory"
+          touch "$probe/file"
+          capability=PASS
+          if ! { ln -s file "$probe/file-link" && ln -s directory "$probe/directory-link" &&
+                 test -L "$probe/file-link" && test -f "$probe/file-link" &&
+                 test -L "$probe/directory-link" && test -d "$probe/directory-link"; }; then
+            capability=BLOCKED
+            echo '::error::Runner cannot create usable file and directory symlinks.'
+          fi
+
+          failed=0
+          for entry in 'domain:Tests' 'feed:Feed.Tests' 'presentation:Presentation.Tests' 'reachability:Reachability.Tests'; do
+            key=${entry%%:*}
+            project="M365.EndpointInspector.${entry#*:}"
+            echo "::group::$project"
+            if [[ $capability == BLOCKED && ( $key == feed || $key == presentation ) ]]; then
+              status=BLOCKED
+            elif dotnet run --project "tests/$project/$project.csproj" -c Release --no-build --no-restore | tee "$probe/$key.log"; then
+              status=PASS
+            else
+              status=FAIL
+            fi
+            echo "$key=$status" >> "$GITHUB_OUTPUT"
+            echo "$key: $status"
+            echo '::endgroup::'
+            [[ $status == PASS ]] || failed=1
+          done
+
+          if [[ $capability == BLOCKED ]]; then
+            links=BLOCKED
+          elif grep -Fxq 'PASS paths, links, lost state and identity' "$probe/feed.log" &&
+               grep -Fxq 'PASS path links, access failure and bounded input' "$probe/presentation.log"; then
+            links=PASS
+          else
+            links=FAIL
+            echo '::error::Required link test success markers are missing.'
+            failed=1
+          fi
+          echo "links=$links" >> "$GITHUB_OUTPUT"
+          exit "$failed"
+
+  wpf:
+    name: Windows WPF Build
+    runs-on: windows-2025
+    timeout-minutes: 15
+    outputs:
+      build: ${{ steps.build.outputs.status }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          global-json-file: global.json
+      - name: Restore and build WPF (Release)
+        id: build
+        shell: pwsh
+        run: |
+          $project = 'src/M365.EndpointInspector.Wpf/M365.EndpointInspector.Wpf.csproj'
+          dotnet --version
+          if ($LASTEXITCODE -eq 0) { dotnet restore $project }
+          if ($LASTEXITCODE -eq 0) { dotnet build $project -c Release --no-restore -warnaserror }
+          if ($LASTEXITCODE -ne 0) {
+            'status=FAIL' >> $env:GITHUB_OUTPUT
+            exit 1
+          }
+          'status=PASS' >> $env:GITHUB_OUTPUT
+
+  summary:
+    name: Regression Summary
+    if: ${{ always() }}
+    needs: [portable, wpf]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Report regression results
+        shell: bash
+        env:
+          PORTABLE_JOB: ${{ needs.portable.result }}
+          WPF_JOB: ${{ needs.wpf.result }}
+          BUILD: ${{ needs.portable.outputs.build }}
+          DOMAIN: ${{ needs.portable.outputs.domain }}
+          FEED: ${{ needs.portable.outputs.feed }}
+          PRESENTATION: ${{ needs.portable.outputs.presentation }}
+          REACHABILITY: ${{ needs.portable.outputs.reachability }}
+          LINKS: ${{ needs.portable.outputs.links }}
+          WPF: ${{ needs.wpf.outputs.build }}
+        run: |
+          portable='NOT RUN'
+          if [[ $PORTABLE_JOB == success && $BUILD == PASS && $DOMAIN == PASS &&
+                $FEED == PASS && $PRESENTATION == PASS && $REACHABILITY == PASS && $LINKS == PASS ]]; then
+            portable=PASS
+          elif [[ $BUILD == FAIL || $DOMAIN == FAIL || $FEED == FAIL ||
+                  $PRESENTATION == FAIL || $REACHABILITY == FAIL || $LINKS == FAIL ]]; then
+            portable=FAIL
+          elif [[ $LINKS == BLOCKED ]]; then
+            portable=BLOCKED
+          fi
+          {
+            printf '## Regression gate — `%s`\n\n' "$GITHUB_SHA"
+            echo '| Check | Status |'
+            echo '| --- | --- |'
+            printf '| Portable Regression | %s |\n' "$portable"
+            printf '| Portable Release Build | %s |\n' "${BUILD:-NOT RUN}"
+            printf '| Domain | %s |\n' "${DOMAIN:-NOT RUN}"
+            printf '| Feed | %s |\n' "${FEED:-NOT RUN}"
+            printf '| Presentation | %s |\n' "${PRESENTATION:-NOT RUN}"
+            printf '| Reachability | %s |\n' "${REACHABILITY:-NOT RUN}"
+            printf '| Link/Symlink coverage | %s |\n' "${LINKS:-NOT RUN}"
+            printf '| Windows WPF Build | %s |\n\n' "${WPF:-NOT RUN}"
+            printf 'Runner job outcomes: Portable `%s`, Windows `%s`.\n\n' "$PORTABLE_JOB" "$WPF_JOB"
+            echo 'Manual GUI acceptance and final ZIP qualification: NOT RUN (outside CI scope).'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+          [[ $PORTABLE_JOB == success && $WPF_JOB == success && $BUILD == PASS &&
+             $DOMAIN == PASS && $FEED == PASS && $PRESENTATION == PASS &&
+             $REACHABILITY == PASS && $LINKS == PASS && $WPF == PASS ]]
